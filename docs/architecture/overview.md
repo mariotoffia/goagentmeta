@@ -260,10 +260,11 @@ Skills may contain:
 - templates
 - prompt fragments
 - assets
+- references (supplemental knowledge documents)
 - references to scripts or resources
 - capability requirements
 
-Skills are portable because they describe how work should be done, not how the runtime itself is extended.
+Skills are portable because they describe how work should be done, not how the runtime itself is extended. Skills follow the [AgentSkills.io](https://agentskills.io/) open standard, which is natively supported by Claude Code, GitHub Copilot, and Codex CLI. Cursor does not support skills and must receive lowered content.
 
 #### Agents
 
@@ -286,6 +287,8 @@ Agents define:
 - optional hooks
 
 An agent is not a tool provider. It is a policy and orchestration surface around tools, skills, and delegation.
+
+Agents may optionally define **handoffs**: guided sequential workflow transitions that suggest the user move to another agent with a pre-filled prompt (e.g., Plan → Implement → Review). Handoffs are currently supported natively by Copilot and are emitted only where the target supports them.
 
 #### Hooks
 
@@ -311,6 +314,8 @@ Use for:
 - `/refactor-ddd-boundary`
 
 Commands are often a fallback target surface when a platform lacks lifecycle hooks.
+
+In Copilot, commands map to **prompt files** (`.prompt.md`), which are lightweight slash commands with optional frontmatter specifying agent, model, and tools. In Claude Code, commands have been merged into skills. In Cursor, commands have no native equivalent.
 
 ### 7.2 Runtime Delivery Primitives
 
@@ -364,6 +369,22 @@ A plugin may be distributed through one of three modes:
 - **registry**: the plugin is declared as a dependency, resolved from a marketplace or package registry at compile time, cached locally, and either materialized or referenced depending on the target.
 
 This distinction is critical because many targets (Claude Code, Cursor, Copilot) only need a configuration reference to an externally-installed MCP server or tool, not a full copy of its source.
+
+#### References
+
+Supplemental knowledge documents that provide in-depth material on a topic. References are demand-loaded: the AI reads them only when deeper knowledge is needed during a workflow, rather than being injected into context unconditionally.
+
+Use for:
+
+- detailed pattern catalogs or cheatsheets
+- deep-dive documentation on a domain concept
+- tool or CLI reference manuals
+- architectural decision rationale
+- extended examples too large for the main skill content
+
+References are currently used within skills but the concept is applicable to any object that carries content (agents, instructions). A skill's `references/` directory contains markdown files that the skill's main content links to.
+
+References are distinct from assets: an asset is a static file consumed by tooling or emitted into output (template, diagram, prompt partial). A reference is a knowledge document consumed by the AI model at read time.
 
 #### Assets
 
@@ -460,6 +481,7 @@ Recommended source layout:
   commands/
   capabilities/
   plugins/
+  references/
   assets/
   scripts/
   profiles/
@@ -478,6 +500,7 @@ Responsibilities:
 - `commands/`: explicit user-invoked workflows
 - `capabilities/`: abstract contracts consumed by skills, agents, hooks, and commands
 - `plugins/`: deployable integration packages that provide capabilities or native extension surfaces
+- `references/`: supplemental knowledge documents consumed by the AI on demand (may also live inside skill or agent directories)
 - `assets/`: static reusable files
 - `scripts/`: executable artifacts
 - `profiles/`: environment-specific policy and enablement data
@@ -497,7 +520,7 @@ This architecture is defined by the following properties:
 - authoring primitives and delivery primitives stay separate
 - skills remain model-facing workflow bundles
 - plugins become first-class runtime packaging units with three distribution modes (inline, external, registry)
-- each build unit emits both an instruction layer (CLAUDE.md, AGENTS.md, .cursorrules) and an extension layer (MCP config, settings) in hybrid mode by default
+- each build unit emits both an instruction layer (CLAUDE.md, AGENTS.md, `.cursor/rules/*.mdc`, `copilot-instructions.md`) and an extension layer (MCP config, settings) in hybrid mode by default
 - capabilities bridge canonical intent to concrete runtime providers
 - lowering is explicit, loss-aware, and governed by preservation levels
 - target overrides exist, but remain narrow and auditable
@@ -521,5 +544,6 @@ These properties satisfy the stated goals:
 - [compiler.md](compiler.md) — compiler pipeline, compiler plugin architecture, capability registry, content plugin architecture
 - [build-output.md](build-output.md) — hierarchy, hooks, output layout, reporting, validation, target strategy, implementation, testing
 - [marketplace.md](marketplace.md) — package distribution, registry, dependency resolution, trust policies, external plugin references
+- [target-grounding.md](target-grounding.md) — verified mapping of canonical concepts to actual platform documentation for Claude Code, Cursor, Copilot, and Codex
 - [editor-tooling.md](editor-tooling.md) — VS Code extensions, language server, build integration, registry UI, preview, extension plugin architecture
 

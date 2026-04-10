@@ -113,9 +113,9 @@ Target-native files that carry instructions, rules, agent definitions, skill con
 Examples:
 
 - `CLAUDE.md` and subtree `CLAUDE.md` files for Claude Code
-- `AGENTS.md` and `SKILL.md` files for GitHub Copilot
-- `.cursorrules` and `.cursor/rules/*.mdc` files for Cursor
-- `AGENTS.md` for Codex
+- `AGENTS.md` and `SKILL.md` files for GitHub Copilot and Codex
+- `.cursor/rules/*.mdc` files for Cursor
+- `AGENTS.md` for Codex and Cursor
 
 These files form a hierarchy matching the repository structure. The renderer decides the exact file names, placement, and syntax.
 
@@ -126,8 +126,8 @@ Target-native configuration that references plugins, MCP servers, tools, and oth
 Examples:
 
 - `.claude/settings.json` with `mcpServers` entries
-- `.cursor/mcp.json` with MCP server bindings
-- `.vscode/mcp.json` with MCP server definitions
+- `.cursor/mcp.json` with `mcpServers` key
+- `.vscode/mcp.json` with `servers` key (note: different top-level key than Claude/Cursor)
 - `.vscode/settings.json` with extension configuration
 
 #### Hybrid Emission
@@ -298,7 +298,7 @@ targets:
       layeredFiles: native
       scopedSections: adapted
     rules:
-      scopedRules: lowered
+      scopedRules: native
     skills:
       bundles: native
       scriptPackaging: adapted
@@ -306,8 +306,8 @@ targets:
       subagents: native
       toolPolicies: native
     hooks:
-      lifecycle: skipped
-      blockingValidation: skipped
+      lifecycle: native
+      blockingValidation: native
     commands:
       explicitEntryPoints: lowered
     plugins:
@@ -315,6 +315,29 @@ targets:
       capabilityProviders: native
     capabilities:
       nativeTools: native
+      mcpBindings: native
+  cursor:
+    instructions:
+      layeredFiles: adapted
+      scopedSections: native
+    rules:
+      scopedRules: native
+    skills:
+      bundles: skipped
+      scriptPackaging: skipped
+    agents:
+      subagents: skipped
+      toolPolicies: skipped
+    hooks:
+      lifecycle: skipped
+      blockingValidation: skipped
+    commands:
+      explicitEntryPoints: skipped
+    plugins:
+      installablePackages: skipped
+      capabilityProviders: skipped
+    capabilities:
+      nativeTools: skipped
       mcpBindings: native
 ```
 

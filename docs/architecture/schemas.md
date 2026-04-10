@@ -93,6 +93,9 @@ requires:
     - terminal.exec
     - repo.search
 resources:
+  references:
+    - references/aws-lambda-patterns.md
+    - references/sdk-v2-migration.md
   assets:
     - assets/templates/lambda_main.go.tmpl
   scripts:
@@ -132,6 +135,11 @@ toolPolicy:
 delegation:
   mayCall:
     - test-runner
+handoffs:
+  - label: Start Review
+    agent: security-reviewer
+    prompt: Review the implementation above for security issues.
+    autoSend: false
 ```
 
 ---

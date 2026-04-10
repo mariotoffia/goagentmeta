@@ -172,15 +172,20 @@ copilot/local-dev/
   # Instruction layer
   .github/
     copilot-instructions.md          # root instructions
-  AGENTS.md                          # agent definitions
-  skills/
-    go-aws-lambda/
-      SKILL.md
+    instructions/
+      go-services.instructions.md    # path-scoped rules (applyTo: frontmatter)
+    agents/
+      go-implementer.agent.md        # custom agent definition
+    skills/
+      go-aws-lambda/
+        SKILL.md                     # rendered skill (AgentSkills.io format)
+    prompts/
+      build-lambda.prompt.md         # command → prompt file
+  AGENTS.md                          # agent instructions (also read by Copilot)
 
   # Extension layer
   .vscode/
-    mcp.json                         # MCP server references
-    settings.json                    # extension configuration
+    mcp.json                         # MCP server references (top-level key: "servers")
 
   # Supporting artifacts
   assets/
@@ -193,22 +198,23 @@ Example for `cursor/local-dev/`:
 ```text
 cursor/local-dev/
   # Instruction layer
-  .cursorrules                       # root instructions + rules
+  AGENTS.md                          # root instructions (Cursor reads AGENTS.md)
   .cursor/
     rules/
-      go-services.mdc                # scoped rules
-  agents/
-    go-implementer.md
+      go-services.mdc                # scoped rules (globs + alwaysApply frontmatter)
+      architecture.md                # always-on rules
 
   # Extension layer
   .cursor/
-    mcp.json                         # MCP server references
+    mcp.json                         # MCP server references (top-level key: "mcpServers")
 
   # Supporting artifacts
   assets/
   scripts/
   provenance.json
 ```
+
+Note: Cursor does not support skills, custom agents, hooks, or plugins natively. Canonical skills and agents are lowered into rules or skipped for Cursor, with lowering decisions reported in provenance.
 
 The instruction layer and extension layer are emitted together by default (hybrid mode). The manifest can disable either layer independently for specialized builds.
 

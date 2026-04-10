@@ -661,7 +661,8 @@ func TestMemFS_Materialize_EmptyContent(t *testing.T) {
 	}
 }
 
-func TestMemFS_Materialize_Idempotent(t *testing.T) {	m := filesystem.NewMemFS()
+func TestMemFS_Materialize_Idempotent(t *testing.T) {
+	m := filesystem.NewMemFS()
 	plan := pipeline.EmissionPlan{
 		Units: map[string]pipeline.UnitEmission{
 			"/out": {
@@ -806,5 +807,253 @@ func TestMemFS_ConcurrentWrites(t *testing.T) {
 	}
 	for i := 0; i < 50; i++ {
 		<-done
+	}
+}
+
+func TestMemFS_ConcurrentReadWrite(t *testing.T) {
+	m := filesystem.NewMemFS()
+	m.WriteFile(ctx(), "/shared.txt", []byte("initial"), 0o644) //nolint:errcheck
+
+	done := make(chan struct{}, 100)
+	// Writers
+	for i := 0; i < 50; i++ {
+		go func(n int) {
+			defer func() { done <- struct{}{} }()
+			p := fmt.Sprintf("/concurrent/w%d.txt", n)
+			m.WriteFile(ctx(), p, []byte("data"), 0o644) //nolint:errcheck
+		}(i)
+	}
+	// Readers
+	for i := 0; i < 50; i++ {
+		go func() {
+			defer func() { done <- struct{}{} }()
+			m.ReadFile(ctx(), "/shared.txt") //nolint:errcheck
+			m.ReadDir(ctx(), "/")            //nolint:errcheck
+			m.Files()
+		}()
+	}
+	for i := 0; i < 100; i++ {
+		<-done
+	}
+}
+
+// ─── Determinism ──────────────────────────────────────────────────────────────
+
+func TestMemFS_Materialize_Deterministic(t *testing.T) {
+	plan := pipeline.EmissionPlan{
+		Units: map[string]pipeline.UnitEmission{
+			"/out/alpha": {
+				Files: []pipeline.EmittedFile{
+					{Path: "a.md", Content: []byte("A")},
+				},
+			},
+			"/out/beta": {
+				Files: []pipeline.EmittedFile{
+					{Path: "b.md", Content: []byte("B")},
+				},
+			},
+			"/out/gamma": {
+				Files: []pipeline.EmittedFile{
+					{Path: "c.md", Content: []byte("C")},
+				},
+			},
+		},
+	}
+
+	var firstRun []string
+	for i := 0; i < 20; i++ {
+		m := filesystem.NewMemFS()
+		result, err := m.Materialize(ctx(), plan)
+		if err != nil {
+			t.Fatalf("run %d: %v", i, err)
+		}
+		if i == 0 {
+			firstRun = result.WrittenFiles
+		} else {
+			for j, f := range result.WrittenFiles {
+				if f != firstRun[j] {
+					t.Fatalf("run %d: non-deterministic at index %d: got %q, first had %q", i, j, f, firstRun[j])
+				}
+			}
+		}
+	}
+}
+
+func TestOSMaterializer_Materialize_Deterministic(t *testing.T) {
+	dir := mustTempDir(t)
+	plan := pipeline.EmissionPlan{
+		Units: map[string]pipeline.UnitEmission{
+			filepath.Join(dir, "z"): {
+				Files: []pipeline.EmittedFile{{Path: "z.md", Content: []byte("Z")}},
+			},
+			filepath.Join(dir, "a"): {
+				Files: []pipeline.EmittedFile{{Path: "a.md", Content: []byte("A")}},
+			},
+			filepath.Join(dir, "m"): {
+				Files: []pipeline.EmittedFile{{Path: "m.md", Content: []byte("M")}},
+			},
+		},
+	}
+
+	var firstRun []string
+	for i := 0; i < 10; i++ {
+		m := filesystem.NewOSMaterializer()
+		result, err := m.Materialize(ctx(), plan)
+		if err != nil {
+			t.Fatalf("run %d: %v", i, err)
+		}
+		if i == 0 {
+			firstRun = result.WrittenFiles
+		} else {
+			for j, f := range result.WrittenFiles {
+				if f != firstRun[j] {
+					t.Fatalf("run %d: non-deterministic at index %d: got %q, first had %q", i, j, f, firstRun[j])
+				}
+			}
+		}
+	}
+}
+
+// ─── OSMaterializer — assets/scripts ──────────────────────────────────────────
+
+func TestOSMaterializer_Materialize_WithAssetSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks may require elevated privileges on Windows")
+	}
+	dir := mustTempDir(t)
+	srcDir := filepath.Join(dir, "src")
+	outDir := filepath.Join(dir, "out")
+	srcFile := filepath.Join(srcDir, "logo.png")
+	os.MkdirAll(srcDir, 0o755)                                //nolint:errcheck
+	os.WriteFile(srcFile, []byte("png-data"), 0o644) //nolint:errcheck
+
+	plan := pipeline.EmissionPlan{
+		Units: map[string]pipeline.UnitEmission{
+			outDir: {
+				Assets: []pipeline.EmittedAsset{
+					{SourcePath: srcFile, DestPath: "assets/logo.png"},
+				},
+			},
+		},
+	}
+
+	m := filesystem.NewOSMaterializer()
+	result, err := m.Materialize(ctx(), plan)
+	if err != nil {
+		t.Fatalf("Materialize: %v", err)
+	}
+	if len(result.SymlinkedFiles) != 1 {
+		t.Errorf("symlinked = %d; want 1", len(result.SymlinkedFiles))
+	}
+
+	dest := filepath.Join(outDir, "assets", "logo.png")
+	info, err := os.Lstat(dest)
+	if err != nil {
+		t.Fatalf("Lstat dest: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Error("expected symlink")
+	}
+}
+
+func TestOSMaterializer_Materialize_WithScript(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("symlinks may require elevated privileges on Windows")
+	}
+	dir := mustTempDir(t)
+	srcDir := filepath.Join(dir, "src")
+	outDir := filepath.Join(dir, "out")
+	srcFile := filepath.Join(srcDir, "hook.sh")
+	os.MkdirAll(srcDir, 0o755)                              //nolint:errcheck
+	os.WriteFile(srcFile, []byte("#!/bin/sh\n"), 0o755) //nolint:errcheck
+
+	plan := pipeline.EmissionPlan{
+		Units: map[string]pipeline.UnitEmission{
+			outDir: {
+				Scripts: []pipeline.EmittedScript{
+					{SourcePath: srcFile, DestPath: "scripts/hook.sh"},
+				},
+			},
+		},
+	}
+
+	m := filesystem.NewOSMaterializer()
+	result, err := m.Materialize(ctx(), plan)
+	if err != nil {
+		t.Fatalf("Materialize: %v", err)
+	}
+	if len(result.SymlinkedFiles) != 1 {
+		t.Errorf("symlinked = %d; want 1", len(result.SymlinkedFiles))
+	}
+}
+
+// ─── NewMaterializer (injectable) ─────────────────────────────────────────────
+
+func TestNewMaterializer_WithMemFS(t *testing.T) {
+	mem := filesystem.NewMemFS()
+	mem.WriteFile(ctx(), "/src/asset.txt", []byte("asset-data"), 0o644) //nolint:errcheck
+
+	mat := filesystem.NewMaterializer(mem, mem)
+	plan := pipeline.EmissionPlan{
+		Units: map[string]pipeline.UnitEmission{
+			"/out": {
+				Files: []pipeline.EmittedFile{
+					{Path: "file.md", Content: []byte("content")},
+				},
+				Assets: []pipeline.EmittedAsset{
+					{SourcePath: "/src/asset.txt", DestPath: "copied/asset.txt"},
+				},
+			},
+		},
+	}
+
+	result, err := mat.Materialize(ctx(), plan)
+	if err != nil {
+		t.Fatalf("Materialize: %v", err)
+	}
+	if len(result.WrittenFiles) != 1 {
+		t.Errorf("written = %d; want 1", len(result.WrittenFiles))
+	}
+
+	// Asset: copyOrSymlink attempts Symlink (which MemFS supports) then fallback.
+	// MemFS.Symlink always succeeds, but through the injectable writer it tries
+	// the writer.Symlink first. Since MemFS Symlink records it, we check that.
+	// However, the copyOrSymlink first calls writer.Remove which may fail (ok, error is discarded).
+	// Then calls writer.Symlink which succeeds on MemFS.
+	if len(result.SymlinkedFiles) != 1 {
+		t.Errorf("symlinked = %d; want 1", len(result.SymlinkedFiles))
+	}
+
+	// Verify the file was written.
+	content, err := mem.ReadFile(ctx(), "/out/file.md")
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(content) != "content" {
+		t.Errorf("content = %q; want %q", content, "content")
+	}
+}
+
+// ─── Empty plan ───────────────────────────────────────────────────────────────
+
+func TestOSMaterializer_Materialize_EmptyPlan(t *testing.T) {
+	m := filesystem.NewOSMaterializer()
+	result, err := m.Materialize(ctx(), pipeline.EmissionPlan{})
+	if err != nil {
+		t.Fatalf("Materialize empty: %v", err)
+	}
+	if len(result.WrittenFiles) != 0 {
+		t.Errorf("expected 0 written files, got %d", len(result.WrittenFiles))
+	}
+}
+
+func TestMemFS_Materialize_EmptyPlan(t *testing.T) {
+	m := filesystem.NewMemFS()
+	result, err := m.Materialize(ctx(), pipeline.EmissionPlan{})
+	if err != nil {
+		t.Fatalf("Materialize empty: %v", err)
+	}
+	if len(result.WrittenFiles) != 0 {
+		t.Errorf("expected 0 written files, got %d", len(result.WrittenFiles))
 	}
 }

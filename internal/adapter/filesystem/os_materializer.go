@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/mariotoffia/goagentmeta/internal/domain/pipeline"
+	portfs "github.com/mariotoffia/goagentmeta/internal/port/filesystem"
 )
 
 // OSMaterializer is an os-backed implementation of port/filesystem.Materializer.
@@ -16,16 +17,30 @@ import (
 //
 // Materialization is idempotent: files with identical content are not
 // rewritten (preserving modification times for build tools).
+//
+// The materializer accepts port interfaces so the materialization logic
+// can be tested with in-memory implementations.
 type OSMaterializer struct {
-	writer *OSWriter
-	reader *OSReader
+	writer portfs.Writer
+	reader portfs.Reader
 }
 
-// NewOSMaterializer creates a new OSMaterializer.
+// NewOSMaterializer creates a new OSMaterializer using the OS-backed
+// Reader and Writer adapters.
 func NewOSMaterializer() *OSMaterializer {
 	return &OSMaterializer{
 		writer: NewOSWriter(),
 		reader: NewOSReader(),
+	}
+}
+
+// NewMaterializer creates a Materializer with injected Reader and Writer
+// implementations, enabling the materialization logic to be tested with
+// in-memory adapters.
+func NewMaterializer(r portfs.Reader, w portfs.Writer) *OSMaterializer {
+	return &OSMaterializer{
+		writer: w,
+		reader: r,
 	}
 }
 
@@ -38,7 +53,15 @@ func NewOSMaterializer() *OSMaterializer {
 func (m *OSMaterializer) Materialize(ctx context.Context, plan pipeline.EmissionPlan) (pipeline.MaterializationResult, error) {
 	var result pipeline.MaterializationResult
 
-	for outputDir, unit := range plan.Units {
+	// Sort unit keys for deterministic output ordering.
+	unitKeys := make([]string, 0, len(plan.Units))
+	for k := range plan.Units {
+		unitKeys = append(unitKeys, k)
+	}
+	sort.Strings(unitKeys)
+
+	for _, outputDir := range unitKeys {
+		unit := plan.Units[outputDir]
 		// Ensure the unit output directory exists.
 		if err := m.writer.MkdirAll(ctx, outputDir, 0o755); err != nil {
 			result.Errors = append(result.Errors, pipeline.MaterializationError{
@@ -156,7 +179,8 @@ func (m *OSMaterializer) copyOrSymlink(ctx context.Context, src, dest string) er
 		return err
 	}
 	// Remove an existing destination so the symlink/copy is clean.
-	_ = os.Remove(dest)
+	// Ignore the error — the file may not exist yet.
+	_ = m.writer.Remove(ctx, dest)
 
 	if err := m.writer.Symlink(ctx, src, dest); err == nil {
 		return nil

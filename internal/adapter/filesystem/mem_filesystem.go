@@ -327,7 +327,15 @@ func (m *MemFS) Remove(_ context.Context, path string) error {
 func (m *MemFS) Materialize(ctx context.Context, plan pipeline.EmissionPlan) (pipeline.MaterializationResult, error) {
 	var result pipeline.MaterializationResult
 
-	for outputDir, unit := range plan.Units {
+	// Sort unit keys for deterministic output ordering.
+	unitKeys := make([]string, 0, len(plan.Units))
+	for k := range plan.Units {
+		unitKeys = append(unitKeys, k)
+	}
+	sort.Strings(unitKeys)
+
+	for _, outputDir := range unitKeys {
+		unit := plan.Units[outputDir]
 		if err := m.MkdirAll(ctx, outputDir, 0o755); err != nil {
 			result.Errors = append(result.Errors, pipeline.MaterializationError{
 				Path: outputDir,

@@ -75,16 +75,20 @@ compiler:
 
 ## 2. Skill
 
+### 2.1 Canonical Form (internal)
+
 ```yaml
 id: go-aws-lambda
 kind: skill
+description: Build and validate Go Lambda services with AWS SDK v2
+packageVersion: "1.3.0"
+license: MIT
 scope:
   paths:
     - "services/**"
 preservation: preferred
 metadata:
   name: go-aws-lambda
-  description: Build and validate Go Lambda services with AWS SDK v2
 content:
   markdown: |
     Use Go 1.24+, context-first APIs, AWS SDK v2, and table-driven tests.
@@ -105,7 +109,69 @@ activation:
     - lambda
     - aws
     - go
+allowedTools:
+  - Read
+  - Write
+  - "Bash(go:*)"
+  - "Bash(golangci-lint:*)"
+compatibility: "Designed for AI coding agents using Go projects."
+binaryDeps:
+  - go
+  - golangci-lint
+installSteps:
+  - kind: go
+    package: golang.org/x/tools/cmd/goimports@latest
+    bins: [goimports]
+publishing:
+  author: acme-team
+  homepage: https://github.com/acme/go-lambda-skill
+  emoji: "🚀"
 ```
+
+### 2.2 AgentSkills.io Frontmatter (import format)
+
+The AgentSkills.io SKILL.md frontmatter uses a different layout. The parser
+adapter maps it to the canonical model above:
+
+```yaml
+---
+name: golang-benchmark
+description: "Golang benchmarking, profiling, and performance measurement."
+user-invocable: true
+license: MIT
+compatibility: Designed for Claude Code or similar AI coding agents.
+metadata:
+  author: samber
+  version: "1.1.3"
+  openclaw:
+    emoji: "📊"
+    homepage: https://github.com/samber/cc-skills-golang
+    requires:
+      bins:
+        - go
+        - benchstat
+    install:
+      - kind: go
+        package: golang.org/x/perf/cmd/benchstat@latest
+        bins: [benchstat]
+allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*)
+---
+```
+
+| AgentSkills.io field | Canonical model field |
+|---|---|
+| `name` | `ObjectMeta.ID` |
+| `description` | `ObjectMeta.Description` |
+| `user-invocable` | `Skill.UserInvocable` |
+| `license` | `ObjectMeta.License` |
+| `compatibility` | `Skill.Compatibility` |
+| `metadata.author` | `Skill.Publishing.Author` |
+| `metadata.version` | `ObjectMeta.PackageVersion` |
+| `metadata.openclaw.emoji` | `Skill.Publishing.Emoji` |
+| `metadata.openclaw.homepage` | `Skill.Publishing.Homepage` |
+| `metadata.openclaw.requires.bins` | `Skill.BinaryDeps` |
+| `metadata.openclaw.install[]` | `Skill.InstallSteps` |
+| `allowed-tools` | `Skill.AllowedTools` |
 
 ---
 
@@ -226,9 +292,9 @@ targets:
 id: github-mcp
 kind: plugin
 preservation: preferred
+description: GitHub API access through MCP
 metadata:
   name: GitHub MCP
-  description: GitHub API access through MCP
 distribution:
   mode: external
   ref: "@modelcontextprotocol/server-github"
@@ -265,9 +331,9 @@ targets:
 id: repo-graph
 kind: plugin
 preservation: optional
+description: Provides repository graph queries as a runtime extension
 metadata:
   name: Repo Graph
-  description: Provides repository graph queries as a runtime extension
 distribution:
   mode: registry
   source: "registry.example.com/plugins/repo-graph"

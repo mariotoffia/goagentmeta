@@ -2,161 +2,452 @@
 
 ## 1. Purpose
 
-This architecture defines a **single source of truth** for AI-agent metadata and behavior, then compiles that source into target-specific artifacts for:
+This specification defines a compiler-based control plane for AI-agent metadata and behavior.
 
+The architecture uses one canonical source tree and emits native artifacts for one or more target ecosystems. It preserves target-native power where possible, applies explicit lowering where necessary, and reports all loss of fidelity through provenance and build diagnostics.
+
+The architecture treats platform differences as compiler concerns, not as a shared runtime abstraction. The canonical model describes intent, dependencies, preservation requirements, and delivery policy. Renderers emit native artifacts for each target.
+
+Plugins are first-class in this specification. A skill is model-facing workflow content. A plugin is a runtime-facing integration package that can provide tools, MCP servers, commands, resources, hooks, or other target-native extension points.
+
+---
+
+## 2. Goals
+
+This control plane exists to satisfy the following goals:
+
+1. author once in a canonical source tree
+2. compile that source to one or more target platforms
+3. preserve the strongest native features of each target instead of flattening to the least common denominator
+4. minimize target-specific deviations, but allow a small and explicit override surface
+5. treat the source tree as compiler input and the generated target artifacts as compiler output
+6. make all loss of fidelity visible through reports, provenance, and policy
+
+Examples of targets include:
+
+- Claude Code
 - Cursor
-- Claude
-- GitHub Copilot+
+- GitHub Copilot
 - Codex
-- Adjacent ecosystems when useful, such as Windsurf, Cline, OpenCode, Gemini CLI, Roo, Goose, AMP, and Kiro
-
-The goal is not to force all platforms into one runtime abstraction. The goal is to create a **canonical authoring model** and a **compiler pipeline** that renders native artifacts per target, while preserving hierarchy, scripts, assets, hooks, skills, and agent specialization wherever supported.
+- adjacent ecosystems added later through new renderers
 
 ---
 
-## 2. Core Architectural Principle
+## 3. Non-Goals
 
-The system must be built as a **compiler pipeline**, not as a shared runtime format.
+This architecture does **not** try to do the following:
 
-The canonical model describes platform-agnostic intent. A target renderer then transforms that intent into native files and folder structures.
+- define a shared runtime that every vendor executes identically
+- guarantee identical behavior across targets
+- erase security, permission, or filesystem differences between targets
+- inline every target-specific feature into the canonical model
+- silently downgrade required behavior
 
-This approach is required because the target environments do not expose the same primitives:
-
-- some support hierarchical instruction files
-- some support native rules
-- some support skills with scripts/resources
-- some support hooks
-- some support subagents or custom agents
-- some support only a subset of the above
-
-Therefore, the architecture must:
-
-1. keep one canonical source model
-2. compile to native target artifacts
-3. preserve hierarchy where supported
-4. degrade gracefully where not supported
-5. package scripts/assets/resources once and attach them when a target supports them
-6. emit build reports for skipped and lowered features
+If a target cannot safely preserve required intent, the compiler must fail or require an explicit override.
 
 ---
 
-## 3. Conceptual Model
+## 4. Implementation Architecture
 
-The canonical control plane separates the following concepts.
+The system is implemented in Go (1.25+) following Domain-Driven Design, Hexagonal Architecture, and Clean Architecture.
 
-### 3.1 Instructions
+### 4.1 Guiding Principles
 
-Always-on guidance for a repository, directory subtree, or bounded context.
+- **Domain model at the center**: canonical objects (instructions, rules, skills, agents, hooks, commands, capabilities, plugins) are domain entities with no infrastructure dependencies.
+- **Ports and adapters**: the domain defines port interfaces for registry access, filesystem I/O, target rendering, and plugin resolution. Adapters implement those ports for concrete infrastructure.
+- **Dependency rule**: dependencies point inward. Domain knows nothing about renderers, registries, or CLI. Application services orchestrate domain logic through ports. Adapters live at the outer ring.
+- **Bounded contexts**: the compiler pipeline naturally decomposes into bounded contexts — parsing, dependency resolution, normalization, capability resolution, lowering, rendering, materialization, and reporting. Each context owns its own aggregates and value objects.
+- **Compiler plugins**: every pipeline stage and every target renderer is a plugin. The compiler core defines stage interfaces; concrete implementations register as plugins. Third parties can extend or replace any stage without forking.
 
-Examples:
+### 4.2 Package Layout
+
+```text
+cmd/                        # CLI entry points
+internal/
+  domain/                   # Core domain model (entities, value objects, domain services)
+    model/                  #   Canonical objects: instruction, rule, skill, agent, etc.
+    capability/             #   Capability contracts and resolution logic
+    plugin/                 #   Plugin domain (distribution, selection, security)
+    build/                  #   Build coordinates (target, profile, scope, build unit)
+    pipeline/               #   Pipeline stage interfaces and compiler plugin contracts
+  application/              # Application services (use cases, orchestration)
+    compiler/               #   Compiler pipeline orchestration and plugin registry
+    dependency/             #   Dependency resolution use cases
+    packaging/              #   Platform-native packaging use cases
+  port/                     # Port interfaces (driven and driving)
+    registry/               #   Registry access port
+    renderer/               #   Target renderer port
+    filesystem/             #   Filesystem I/O port
+    reporter/               #   Reporting and provenance port
+    stage/                  #   Pipeline stage port (compiler plugin SPI)
+  adapter/                  # Infrastructure adapters
+    parser/                 #   YAML/Markdown parser adapter
+    registry/               #   Registry client adapters (HTTP, git, filesystem)
+    renderer/               #   Target renderer backends (claude, cursor, copilot, codex)
+    materializer/           #   File/symlink materializer
+    cli/                    #   CLI adapter (cobra/flags)
+    stage/                  #   Built-in pipeline stage implementations
+pkg/                        # Public API types shared with external tools
+  sdk/                      # Compiler plugin SDK for third-party stage/renderer authors
+```
+
+### 4.3 Domain Boundaries
+
+| Bounded Context | Aggregate Root | Key Value Objects |
+|---|---|---|
+| Parsing | SourceTree | RawObject, SchemaVersion |
+| Dependency | DependencyGraph | PackageRef, VersionConstraint, LockEntry |
+| Normalization | SemanticGraph | NormalizedObject, Scope, InheritanceChain |
+| Build Planning | BuildPlan | BuildUnit, BuildCoordinate |
+| Capability | CapabilityGraph | Capability, Provider, ProviderCandidate |
+| Lowering | LoweredGraph | LoweringDecision, PreservationLevel |
+| Rendering | EmissionPlan | EmittedFile, EmissionLayer |
+| Reporting | BuildReport | Provenance, Diagnostic, LoweringRecord |
+| Pipeline | StageRegistry | StageDescriptor, StageHook, StageOrder |
+
+Interfaces between bounded contexts are small and explicit. Each context exposes a port that the next stage in the pipeline consumes. Every stage is backed by a compiler plugin that implements the stage port interface.
+
+---
+
+## 5. Core Principle
+
+The system must be built as a multi-stage compiler.
+
+The `.ai/` tree is the source language.
+
+The compiler performs:
+
+1. parsing and validation
+2. dependency resolution against registries and lock file
+3. normalization into a semantic graph
+4. expansion into a target/profile build graph
+5. capability resolution
+6. lowering of unsupported concepts
+7. rendering into target-native files and packages
+8. materialization of scripts, assets, resources, and plugins
+9. reporting and provenance generation
+
+Textually:
+
+```text
+.ai/ source tree
+  -> parser + schema validator
+  -> dependency resolver (registries + lock file)
+  -> normalized semantic graph
+  -> target x profile build graph
+  -> capability resolver + lowering engine
+  -> target renderer backends
+  -> asset/script/plugin materializer
+  -> .ai-build/ outputs + reports + optional repo sync
+```
+
+Renderers must not interpret raw source files directly. They must consume normalized IR so that:
+
+- renderer behavior stays deterministic
+- lowering decisions are centralized
+- provenance is uniform
+- new targets do not re-implement core semantics
+
+---
+
+## 6. Build Coordinates
+
+The compiler operates on explicit build coordinates.
+
+### 6.1 Target
+
+A **target** is the vendor or ecosystem being emitted for, for example:
+
+- `claude`
+- `cursor`
+- `copilot`
+- `codex`
+
+Targets own syntax, file placement, packaging rules, and capability support.
+
+### 6.2 Profile
+
+A **profile** is the runtime environment or policy shape, for example:
+
+- `local-dev`
+- `ci`
+- `enterprise-locked`
+- `oss-public`
+
+Profiles control security-sensitive behavior such as:
+
+- whether hooks are enabled
+- whether scripts may be emitted
+- whether plugins may auto-install
+- whether networked capabilities are allowed
+- whether secrets or MCP bindings may be referenced
+
+### 6.3 Scope
+
+A **scope** identifies where canonical objects apply.
+
+Supported scope styles should include:
+
+- repository root
+- subtree path
+- glob
+- file type or language
+- labels or bounded contexts
+
+### 6.4 Build Unit
+
+A **build unit** is:
+
+```text
+(target, profile, selected scopes)
+```
+
+The compiler may emit many build units in one run. This supports “compile to one or more environments” without duplicating source content.
+
+---
+
+## 7. Canonical Object Model
+
+The object model must distinguish between authoring primitives and runtime delivery primitives.
+
+### 7.1 Authoring Primitives
+
+These are the main source-language concepts.
+
+#### Instructions
+
+Always-on guidance and context.
+
+Use for:
+
 - architecture principles
 - coding standards
 - testing expectations
-- review policy
-- domain language
-- repo workflow
+- review policies
+- domain vocabulary
+- workflow guidance
 
-These typically compile to files such as:
-- `AGENTS.md`
-- `CLAUDE.md`
-- target-specific instruction surfaces
-- generated instruction sections inside other native files
+Instructions are unconditional within their scope.
 
-### 3.2 Rules
+#### Rules
 
-Scoped or conditional guidance.
+Scoped or conditional policy.
 
-Examples:
-- Go rules under `services/**/*.go`
-- CDK/TypeScript rules under `infra/**/*.ts`
-- policy for generated code
-- security rules for IAM-related files
+Use for:
 
-Rules are distinct from instructions. However, when a target does not expose rules as a first-class concept, rules may be lowered into instructions.
+- language-specific rules
+- generated-code handling
+- security restrictions for sensitive paths
+- path- or file-type-specific conventions
 
-### 3.3 Skills
+Rules are semantically distinct from instructions even if some targets require lowering them into instructions.
 
-Reusable, on-demand capability bundles.
+#### Skills
 
-Examples:
-- build a Go AWS Lambda
-- validate Terraform/CDK
-- review IAM policies
-- generate Rego tests
+Reusable, model-facing workflow bundles.
 
-A skill may include:
-- instructions
-- assets
+Use for:
+
+- build a Go Lambda
+- review IAM policy changes
+- run Terraform validation
+- scaffold a new bounded context
+
+Skills may contain:
+
+- markdown guidance
+- examples
 - templates
-- scripts
-- resources
-- activation hints
+- prompt fragments
+- assets
+- references to scripts or resources
+- capability requirements
 
-Skills are the strongest cross-platform common denominator and should carry most reusable workflows.
+Skills are portable because they describe how work should be done, not how the runtime itself is extended.
 
-### 3.4 Agents
+#### Agents
 
-Specialized delegates or subagents.
+Specialized delegates or orchestration wrappers.
 
-Examples:
+Use for:
+
 - Go implementer
-- AWS architecture reviewer
+- infrastructure reviewer
 - security reviewer
-- test runner
 - documentation refiner
 
-An agent typically contains:
-- system prompt / role prompt
-- tool permissions
+Agents define:
+
+- role or system prompt
+- tool and permission policy
 - allowed delegations
 - linked skills
-- optional agent-specific hooks
+- required capabilities
+- optional hooks
 
-Agents are orchestration wrappers around prompts, tools, and linked skills. Their metadata is not portable enough to be treated as a fully universal schema at the emitted layer.
+An agent is not a tool provider. It is a policy and orchestration surface around tools, skills, and delegation.
 
-### 3.5 Hooks
+#### Hooks
 
-Deterministic lifecycle automation executed outside the model’s discretion.
+Deterministic lifecycle automation triggered by defined events.
 
-Examples:
+Use for:
+
 - post-edit validation
-- pre-run environment setup
-- pre-commit checks
-- async reporting
-- prompt-time transformations
+- pre-run setup
+- prompt transforms
+- post-generation linting
 
-Hooks are the least portable primitive and must be modeled separately, then emitted only when the target supports them.
+Hooks are highly non-portable and must therefore carry explicit effect semantics.
 
-### 3.6 Commands
+#### Commands
 
-Explicit user-invoked workflows, where a target supports that concept.
+Explicit user-invoked entry points.
 
-Examples:
+Use for:
+
 - `/review-iam`
 - `/build-lambda`
 - `/refactor-ddd-boundary`
 
-Commands can be used as a fallback emission path when hooks are unsupported.
+Commands are often a fallback target surface when a platform lacks lifecycle hooks.
 
-### 3.7 Tools and MCP Bindings
+### 7.2 Runtime Delivery Primitives
 
-External capabilities made available to an agent runtime.
+These are not model-facing authoring concepts. They exist to satisfy or package runtime needs.
+
+#### Capabilities
+
+A **capability** is an abstract contract required by authoring primitives.
 
 Examples:
-- filesystem tools
-- terminal tools
-- MCP tool definitions
-- code search tools
-- repo graph tools
-- deployment validators
 
-These are target-specific and should be treated as renderer concerns driven by canonical capability intent.
+- `filesystem.read`
+- `terminal.exec`
+- `repo.search`
+- `repo.graph.query`
+- `aws.validate.iam`
+- `mcp.github`
+
+Skills, agents, commands, and hooks may require capabilities. Targets do not consume capabilities directly; they consume concrete providers selected by the compiler.
+
+#### Plugins
+
+A **plugin** is a deployable extension package that provides one or more capabilities or native extension surfaces.
+
+Examples:
+
+- a target-native plugin manifest and runtime bundle
+- an MCP-backed extension package
+- a packaged code-search provider
+- a repo-graph service exposed as tools
+
+Plugins may provide:
+
+- capabilities
+- native tool manifests
+- MCP server bindings
+- commands
+- resources
+- assets
+- target-native manifests
+- optional hooks or event bindings where the target supports them
+
+Plugins are runtime-facing packaging units. They must be modeled separately from skills.
+
+##### Distribution Modes
+
+A plugin may be distributed through one of three modes:
+
+- **inline**: plugin code and artifacts live in `.ai/plugins/` in the repository. The compiler copies or symlinks them into the build output.
+- **external**: the plugin is installed and managed outside the repository. The compiler emits only a reference (for example, an entry in `.claude/settings.json` or a Cursor MCP config block). No plugin code is materialized.
+- **registry**: the plugin is declared as a dependency, resolved from a marketplace or package registry at compile time, cached locally, and either materialized or referenced depending on the target.
+
+This distinction is critical because many targets (Claude Code, Cursor, Copilot) only need a configuration reference to an externally-installed MCP server or tool, not a full copy of its source.
+
+#### Assets
+
+Static files used by other objects, for example:
+
+- templates
+- examples
+- diagrams
+- prompt partials
+- sample outputs
+
+#### Scripts
+
+Executable artifacts used by hooks, commands, skills, or plugins.
+
+Examples:
+
+- validation scripts
+- resource generators
+- packaging helpers
+- local servers used by MCP or plugin runtimes
+
+### 7.3 Required Separation
+
+The following distinctions are required for the architecture to remain coherent:
+
+- **Instruction**: always-on policy text
+- **Rule**: conditional or scoped policy
+- **Skill**: reusable workflow content
+- **Agent**: orchestration wrapper around prompts, permissions, skills, and delegation
+- **Capability**: abstract contract that some object needs
+- **Plugin**: deployable provider or extension that satisfies capabilities
+
+This separation prevents the common failure mode where “skill”, “tool”, “plugin”, and “agent” collapse into one ambiguous concept.
 
 ---
 
-## 4. Canonical Repository Layout
+## 8. Common Metadata Contract
 
-Recommended source-of-truth layout:
+Every canonical object should share a small common envelope:
+
+```yaml
+id: unique-id
+kind: instruction | rule | skill | agent | hook | command | capability | plugin
+version: 1
+scope:
+  paths: ["/"]
+appliesTo:
+  targets: ["*"]
+  profiles: ["*"]
+extends: []
+preservation: required | preferred | optional
+labels: []
+owner: platform-team
+targetOverrides: {}
+```
+
+### 8.1 Preservation Semantics
+
+Preservation must be explicit.
+
+- `required`: unsupported or unsafe lowering fails the build
+- `preferred`: lower when safe, otherwise warn and skip
+- `optional`: may skip with reporting
+
+This is stronger than a single global `unsupportedMode`. Different objects have different importance.
+
+### 8.2 Override Semantics
+
+`targetOverrides` must be delta-based. They may adjust:
+
+- syntax
+- file placement
+- packaging hints
+- enablement
+- optional target-native features
+
+They must not silently redefine canonical meaning unless the override is marked as a semantic replacement with an explicit reason.
+
+---
+
+## 9. Canonical Repository Layout
+
+Recommended source layout:
 
 ```text
 .ai/
@@ -167,753 +458,68 @@ Recommended source-of-truth layout:
   agents/
   hooks/
   commands/
+  capabilities/
+  plugins/
   assets/
   scripts/
+  profiles/
   targets/
   schema/
 ```
 
-### 4.1 Responsibilities
+Responsibilities:
 
-- `manifest.yaml` contains global metadata, compilation defaults, target selection, inheritance rules, and build policy.
-- `instructions/` contains always-on policy and guidance by scope.
-- `rules/` contains scoped or conditional policy.
-- `skills/` contains reusable capability bundles, usually with markdown, scripts, and resources.
-- `agents/` contains canonical agent definitions.
-- `hooks/` contains global, skill-bound, or agent-bound lifecycle automation.
-- `commands/` contains explicit user-triggered workflows.
-- `assets/` contains images, templates, prompt fragments, examples, diagrams, and other static resources.
-- `scripts/` contains shell, Python, Go, or other scripts referenced by hooks, skills, agents, or commands.
-- `targets/` contains target-specific overrides and renderer configuration.
-- `schema/` contains versioned JSON Schema or equivalent validation definitions.
+- `manifest.yaml`: build defaults, selected targets and profiles, compiler policy, materialization policy
+- `instructions/`: always-on content by scope
+- `rules/`: conditional or scoped policy
+- `skills/`: reusable workflow bundles
+- `agents/`: specialized orchestration definitions
+- `hooks/`: lifecycle automation definitions
+- `commands/`: explicit user-invoked workflows
+- `capabilities/`: abstract contracts consumed by skills, agents, hooks, and commands
+- `plugins/`: deployable integration packages that provide capabilities or native extension surfaces
+- `assets/`: static reusable files
+- `scripts/`: executable artifacts
+- `profiles/`: environment-specific policy and enablement data
+- `targets/`: renderer configuration, target-specific capability registry, override fragments, packaging glue
+- `schema/`: versioned validation schemas
 
----
-
-## 5. Canonical Primitive Schemas
-
-## 5.1 Manifest
-
-The manifest defines build policy and target selection.
-
-Example:
-
-```yaml
-schemaVersion: 1
-project:
-  name: goagentmeta
-  monorepo: true
-
-targets:
-  cursor:
-    enabled: true
-  claude:
-    enabled: true
-  copilot:
-    enabled: true
-  codex:
-    enabled: true
-
-compilation:
-  hierarchyMode: preserve-when-supported
-  unsupportedMode: skip-with-report
-  assetPackaging: symlink-or-copy
-  scriptPackaging: preserve-relative-paths
-
-inheritance:
-  instructions: nearest-wins-with-parent-merge
-  rules: additive
-  hooks: merge-by-scope
-  skills: global-plus-local
-  agents: namespaced
-```
-
-## 5.2 Instruction
-
-```yaml
-id: repo-core
-kind: instruction
-scope:
-  type: path
-  path: /
-inheritance:
-  extends: []
-content:
-  markdown: |
-    Coding standards, architecture, testing, review policy...
-attachments:
-  assets: [assets/architecture/clean-arch.png]
-  scripts: [scripts/validate.sh]
-capabilities:
-  mayReferenceSkills: true
-  mayReferenceAgents: true
-```
-
-## 5.3 Rule
-
-```yaml
-id: go-backend-rule
-kind: rule
-match:
-  paths:
-    - "services/**/*.go"
-  when:
-    fileType: go
-priority: 80
-content:
-  markdown: |
-    Use Go 1.24+, table-driven tests, context first, AWS SDK v2...
-attachments:
-  scripts: [scripts/go-lint.sh]
-```
-
-## 5.4 Skill
-
-```yaml
-id: go-aws-lambda
-kind: skill
-metadata:
-  name: go-aws-lambda
-  description: Build and validate Go Lambda services with AWS SDK v2
-content:
-  markdown: |
-    Steps, conventions, validation, examples...
-resources:
-  files:
-    - assets/templates/lambda_main.go.tmpl
-scripts:
-  - path: scripts/skills/go-aws-lambda/test.sh
-  - path: scripts/skills/go-aws-lambda/package.sh
-activation:
-  hints:
-    - lambda
-    - aws sdk v2
-    - go
-```
-
-## 5.5 Agent
-
-```yaml
-id: go-implementer
-kind: agent
-metadata:
-  name: Go Implementer
-  description: Implements Go backend changes with tests
-systemPrompt: |
-  Focused on minimal, correct code changes.
-tools:
-  allow:
-    - read
-    - edit
-    - search
-    - terminal
-delegation:
-  mayCall:
-    - aws-reviewer
-    - test-runner
-attachments:
-  skills:
-    - go-aws-lambda
-  scripts:
-    - scripts/agents/go-implementer/prep.sh
-```
-
-## 5.6 Hook
-
-```yaml
-id: post-edit-validate
-kind: hook
-event: post-edit
-scope:
-  paths:
-    - "services/**"
-action:
-  run: scripts/hooks/post-edit-validate.sh
-inputs:
-  include:
-    - changedFiles
-    - workingDirectory
-policy:
-  onFailure: block
-  timeoutSeconds: 60
-```
+This layout keeps authoring concerns separate from delivery concerns.
 
 ---
 
-## 6. Hierarchy and Monorepo Support
+## 10. Architecture Summary
 
-Hierarchy must be a first-class architectural concern.
+This architecture is defined by the following properties:
 
-The architecture supports three logical layers.
+- the `.ai/` tree is a source language, not a runtime
+- the compiler emits a build matrix of `target x profile`
+- authoring primitives and delivery primitives stay separate
+- skills remain model-facing workflow bundles
+- plugins become first-class runtime packaging units with three distribution modes (inline, external, registry)
+- each build unit emits both an instruction layer (CLAUDE.md, AGENTS.md, .cursorrules) and an extension layer (MCP config, settings) in hybrid mode by default
+- capabilities bridge canonical intent to concrete runtime providers
+- lowering is explicit, loss-aware, and governed by preservation levels
+- target overrides exist, but remain narrow and auditable
+- reports and provenance are mandatory
+- external dependencies are resolved from registries with versioning, integrity, and trust controls
+- compiled output can be wrapped as platform-native packages (VS Code extensions, npm packages) for distribution and updates through each platform's marketplace
 
-### 6.1 Global Layer
+These properties satisfy the stated goals:
 
-Applies to the whole repository or workspace.
-
-Examples:
-- root instructions
-- global security rules
-- shared skills
-- default hooks
-
-### 6.2 Subtree Layer
-
-Applies to a bounded context, package, service, module, or directory subtree.
-
-Examples:
-- `services/energy-optimizer/`
-- `packages/rec-model/`
-- `infra/cdk/`
-
-These may define:
-- local instructions
-- local rules
-- subtree-specific skills
-- subtree-specific agent overrides
-- subtree-specific hooks
-
-### 6.3 Target Override Layer
-
-Used only when a given target requires special handling.
-
-Examples:
-
-```text
-.ai/
-  instructions/
-    root.md
-    services/
-      root.md
-      energy-optimizer.md
-  targets/
-    claude/
-      overrides/
-    cursor/
-      overrides/
-```
-
-### 6.4 Merge Order
-
-Recommended merge order:
-
-1. global canonical content
-2. subtree canonical content
-3. target-specific override
-4. renderer-added target glue
-
-This ensures:
-- stable inheritance
-- path-local specialization
-- optional per-target tuning
-- deterministic generated output
+1. single source of truth
+2. access to target-native bells and whistles where supported
+3. one or many target outputs from the same source
+4. strong abstraction with a small override surface
+5. a compiler-shaped architecture rather than hand-maintained copies
 
 ---
 
-## 7. Capability-Aware Compiler Pipeline
+## Related Documents
 
-The architecture is centered on a capability-aware compiler.
+- [schemas.md](schemas.md) — illustrative YAML schemas for all canonical object types
+- [compiler.md](compiler.md) — compiler pipeline, compiler plugin architecture, capability registry, content plugin architecture
+- [build-output.md](build-output.md) — hierarchy, hooks, output layout, reporting, validation, target strategy, implementation, testing
+- [marketplace.md](marketplace.md) — package distribution, registry, dependency resolution, trust policies, external plugin references
+- [editor-tooling.md](editor-tooling.md) — VS Code extensions, language server, build integration, registry UI, preview, extension plugin architecture
 
-## 7.1 Pipeline Phases
-
-### Phase 1: Load
-
-Read all canonical YAML/Markdown content and validate structure.
-
-### Phase 2: Normalize
-
-Resolve:
-- inheritance
-- relative asset/script paths
-- scope expansion
-- target applicability
-- name collisions
-- default values
-
-### Phase 3: Capability Resolution
-
-Maintain a target capability registry such as:
-
-```yaml
-capabilities:
-  claude:
-    instructions: true
-    rules: partial
-    skills: true
-    agents: true
-    hooks: true
-    hierarchy: true
-  cursor:
-    instructions: partial
-    rules: true
-    skills: true
-    agents: true
-    hooks: true
-    hierarchy: partial
-  copilot:
-    instructions: true
-    rules: partial
-    skills: true
-    agents: true
-    hooks: limited_or_none
-    hierarchy: partial
-  codex:
-    instructions: true
-    rules: partial
-    skills: true
-    agents: true
-    hooks: limited_or_none
-    hierarchy: true
-```
-
-Capability levels should be classified as:
-- native
-- lowered
-- skipped
-
-### Phase 4: Lowering
-
-Transform unsupported primitives into nearest supported equivalents.
-
-Examples:
-- rule -> instruction section
-- hook -> command or skill script reference
-- unsupported hierarchy -> flatten to nearest supported root
-- agent-specific resources -> linked skill resources
-
-### Phase 5: Render
-
-Emit target-native files and folder structures.
-
-### Phase 6: Materialize Assets
-
-Copy or symlink scripts, templates, examples, and other resources into expected locations.
-
-### Phase 7: Report
-
-Generate a build report showing:
-- emitted files
-- skipped features
-- degraded features
-- collisions and conflicts
-- provenance from source to output
-
----
-
-## 8. Target Rendering Strategy
-
-The renderers are separate backends driven by the same canonical model.
-
-## 8.1 Claude Renderer
-
-Use:
-- `CLAUDE.md` for instructions
-- native hooks
-- native subagents
-- native skills
-
-Renderer behavior:
-- preserve distinction between instructions, skills, hooks, and agents
-- lower rules into instructions when no closer native representation exists
-- package assets/scripts/resources alongside emitted skills where appropriate
-
-## 8.2 Cursor Renderer
-
-Use:
-- native rules where possible
-- native hooks
-- native subagents
-- native skills
-- target instruction surfaces where needed
-
-Renderer behavior:
-- preserve rules as rules whenever supported
-- map scoped guidance to Cursor-native modular concepts rather than flatten too early
-- attach scripts/resources to skills and hooks where possible
-
-## 8.3 GitHub Copilot Renderer
-
-Use:
-- custom agents such as `.agent.md`
-- agent tool declarations
-- Agent Skills as the reusable workflow layer
-- generated instruction surfaces for repo guidance
-
-Renderer behavior:
-- keep reusable workflow logic in skills
-- render agents as thin wrappers around prompt + tools + linked skills
-- lower unsupported hooks into commands or documented scripts when necessary
-
-## 8.4 Codex Renderer
-
-Use:
-- layered `AGENTS.md`
-- Agent Skills
-- subagents/custom agents
-
-Renderer behavior:
-- preserve hierarchical instruction layering strongly
-- keep skills native
-- lower rules into `AGENTS.md` sections when no native rule form exists
-- skip or downgrade unsupported hook semantics with clear reporting
-
----
-
-## 9. Scripts, Assets, and Resources
-
-Scripts, assets, and resources must be canonical and reusable.
-
-## 9.1 Assets
-
-Canonical location:
-
-```text
-.ai/assets/
-```
-
-Examples:
-- diagrams
-- templates
-- prompt fragments
-- markdown partials
-- code samples
-- example inputs/outputs
-
-## 9.2 Scripts
-
-Canonical location:
-
-```text
-.ai/scripts/
-```
-
-Examples:
-- shell validation scripts
-- Go helpers
-- Python transforms
-- packaging scripts
-- policy validation scripts
-
-## 9.3 Packaging Policy
-
-Each renderer decides whether to:
-- reference the asset/script
-- copy it
-- symlink it
-- inline it
-- skip it with a warning
-
-### Recommended policy
-
-- **Skills** should package scripts/resources alongside `SKILL.md`-style outputs where supported.
-- **Hooks** should point directly to scripts for targets that support native hooks.
-- **Instructions and rules** should usually reference scripts textually, unless the target offers native automation.
-
----
-
-## 10. Hook Model
-
-Hooks must be modeled at three scopes.
-
-### 10.1 Global Hooks
-
-Apply repository-wide.
-
-Examples:
-- post-edit validation
-- prompt sanitization
-- environment checks
-
-### 10.2 Agent Hooks
-
-Attached to a specific agent.
-
-Examples:
-- pre-run repository prep
-- post-edit language-specific validation
-- agent-specific telemetry
-
-### 10.3 Skill Hooks
-
-Attached to a specific skill.
-
-Examples:
-- setup scripts
-- resource generation
-- post-skill verification
-
-Recommended layout:
-
-```text
-.ai/hooks/
-  global/
-  agents/
-    go-implementer/
-  skills/
-    go-aws-lambda/
-```
-
-If a target does not support a given hook class, the compiler should:
-- skip it
-- lower it to commands or script references where possible
-- record the downgrade in the build report
-
----
-
-## 11. Build Output Layout
-
-Generated files should not be emitted directly into the repository root during compilation. Use a build tree first.
-
-Recommended build layout:
-
-```text
-.ai-build/
-  claude/
-  cursor/
-  copilot/
-  codex/
-  report.md
-```
-
-Then either:
-- sync generated files into the working repository
-- expose them through symlinks
-- commit selected generated files
-
-Examples of final repo-visible outputs may include:
-
-```text
-CLAUDE.md
-AGENTS.md
-.github/
-  copilot/
-.claude/
-  agents/
-  skills/
-.cursor/
-.codex/
-```
-
-Each generated file should carry a header such as:
-
-```md
-<!-- generated by ai-control-plane; source: .ai/... ; do not edit -->
-```
-
----
-
-## 12. Validation and Linting
-
-The architecture requires strong validation.
-
-### 12.1 Structural Validation
-
-Validate all source artifacts against versioned schemas.
-
-Suggested schemas:
-
-```text
-.ai/schema/
-  instruction.schema.json
-  rule.schema.json
-  skill.schema.json
-  agent.schema.json
-  hook.schema.json
-  target-capabilities.schema.json
-```
-
-### 12.2 Semantic Validation
-
-Check for:
-- duplicate IDs
-- duplicate agent names
-- circular agent delegation
-- missing referenced skills
-- missing scripts/assets/resources
-- invalid path scopes
-- unsupported hook events
-- conflicting rule priorities
-- conflicting target overrides
-
-### 12.3 Security Validation
-
-Classify executable artifacts by trust level.
-
-Example:
-
-```yaml
-security:
-  level: trusted | review-required | disabled-by-default
-```
-
-This supports safer profile-based rendering.
-
----
-
-## 13. Environment Profiles
-
-Not every runtime environment should receive the same emitted result.
-
-Recommended profiles:
-- `local-dev`
-- `ci`
-- `enterprise-locked`
-- `oss-public`
-
-Profiles can control:
-- hook enablement
-- script emission
-- MCP bindings
-- agent availability
-- asset exposure
-- permission-sensitive defaults
-
-This is necessary because script and tool access vary across environments.
-
----
-
-## 14. Target Overrides and Escape Hatches
-
-A pure abstraction is insufficient in practice. The architecture must allow target-specific escape hatches.
-
-Example:
-
-```yaml
-targetOverrides:
-  claude: ...
-  cursor: ...
-  copilot: ...
-  codex: ...
-```
-
-Use this only when:
-- the canonical abstraction cannot express a target-native behavior
-- a platform requires unusual syntax or file placement
-- a specific target feature should be enabled or suppressed
-
-The canonical layer remains authoritative. Overrides are exceptions, not the primary authoring model.
-
----
-
-## 15. Conflict Resolution and Determinism
-
-Generated outputs must be deterministic.
-
-Recommended rules:
-- stable file ordering
-- stable merge ordering
-- nearest-scope precedence for instructions
-- additive merge for rules unless overridden by priority
-- namespaced agents
-- explicit errors for ambiguous conflicts
-- explicit warnings for downgraded features
-
-Determinism is critical for:
-- CI validation
-- reproducible generation
-- version-control clarity
-- code review
-
----
-
-## 16. What Belongs Where
-
-The canonical authoring guidance should be:
-
-- **Instructions** = always-on policy and context
-- **Rules** = scoped or conditional policy
-- **Skills** = reusable workflows with scripts/resources/assets
-- **Agents** = orchestration wrappers around prompts, tools, delegations, and linked skills
-- **Hooks** = deterministic automation
-- **Commands** = explicit user-triggered workflows or fallback automation surfaces
-
-This separation is the most robust abstraction across Claude, Cursor, GitHub Copilot, and Codex.
-
----
-
-## 17. Recommended Runtime Architecture
-
-Build a project such as:
-
-```text
-ai-control-plane
-```
-
-It should contain:
-
-1. a canonical DSL in YAML + Markdown
-2. a schema validator
-3. a normalization engine
-4. a target capability registry
-5. a lowering engine for unsupported concepts
-6. target-specific renderers
-7. an asset/script materializer
-8. a reporting engine
-9. CI lint and validation steps
-10. environment/profile support
-
-This gives:
-- true single source of truth
-- native target rendering
-- graceful degradation
-- multi-target support in the same repo
-- hierarchical rendering where supported
-- repeatable generation and reviewability
-
----
-
-## 18. Additional Considerations
-
-The following should also be included in the architecture.
-
-### 18.1 Provenance Tracking
-
-Every emitted artifact should record:
-- source objects used
-- merge order
-- overrides applied
-- lowering decisions
-
-### 18.2 Documentation Generation
-
-The compiler should generate:
-- support matrix
-- rendered file map
-- skip/degradation report
-- source-to-output provenance map
-
-### 18.3 Future Target Expansion
-
-The model should be extensible to additional targets such as:
-- Windsurf
-- Cline
-- OpenCode
-- Gemini CLI
-- Roo
-- Goose
-- AMP
-- Kiro
-
-This is another reason the control plane must be capability-driven, not hardcoded around one vendor.
-
-### 18.4 Testing Strategy
-
-The compiler should include:
-- unit tests for normalization and lowering
-- golden-file tests for rendered target outputs
-- integration tests for build trees
-- validation tests for schema evolution
-
----
-
-## 19. Summary
-
-The correct architecture is a **canonical metadata control plane plus capability-aware renderers**.
-
-It should:
-- define instructions, rules, skills, agents, hooks, commands, assets, and scripts separately
-- preserve hierarchy where a target supports it
-- lower unsupported constructs into nearest equivalents
-- package scripts/assets/resources once and attach them per target
-- support multiple targets in the same repository
-- emit deterministic outputs and explicit reports
-
-This avoids false standardization while still providing one authoritative source model for all supported environments.

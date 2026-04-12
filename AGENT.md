@@ -41,11 +41,12 @@ goagentmeta/
 │   │   ├── capability/            #   Capability contracts and resolution logic
 │   │   ├── plugin/                #   Plugin domain (distribution, selection, security)
 │   │   ├── build/                 #   Build coordinates (target, profile, scope, build unit)
-│   │   └── pipeline/              #   Pipeline stage interfaces and compiler plugin contracts
+│   │   ├── tool/                  #   Tool plugin domain (expression parsing, registry, validation)
+│   │   └── pipeline/              #   Pipeline IR types, phase definitions, compiler errors
 │   ├── application/               # Application services (use cases, orchestration)
 │   │   ├── compiler/              #   Compiler pipeline orchestration and plugin registry
 │   │   ├── dependency/            #   Dependency resolution use cases
-│   │   └── packaging/             #   Platform-native packaging use cases
+│   │   └── (reserved for future packaging use cases)
 │   ├── port/                      # Port interfaces (driven and driving)
 │   │   ├── registry/              #   Registry access port
 │   │   ├── renderer/              #   Target renderer port
@@ -53,12 +54,22 @@ goagentmeta/
 │   │   ├── reporter/              #   Reporting and provenance port
 │   │   └── stage/                 #   Pipeline stage port (compiler plugin SPI)
 │   └── adapter/                   # Infrastructure adapters (outermost ring)
-│       ├── parser/                #   YAML/Markdown parser adapter
+│       ├── stage/                 #   Built-in pipeline stage implementations
+│       │   ├── parser/            #     YAML/Markdown frontmatter parser
+│       │   ├── validator/         #     Structural + semantic validation
+│       │   ├── resolver/          #     Dependency resolution
+│       │   ├── normalizer/        #     Inheritance + merge normalization
+│       │   ├── planner/           #     Build plan generation
+│       │   ├── capability/        #     Capability resolution
+│       │   ├── lowering/          #     IR lowering (safe/unsafe)
+│       │   ├── materializer/      #     File/symlink materializer
+│       │   └── reporter/          #     Build report generation
+│       ├── tool/                  #   Built-in tool plugin registry
 │       ├── registry/              #   Registry client adapters (HTTP, git, filesystem)
-│       ├── renderer/              #   Target renderer backends (claude, cursor, copilot, codex)
-│       ├── materializer/          #   File/symlink materializer
-│       ├── cli/                   #   CLI adapter (cobra/flags)
-│       └── stage/                 #   Built-in pipeline stage implementations
+│       ├── renderer/              #   Target renderer backends (claude, copilot, codex)
+│       ├── filesystem/            #   OS filesystem I/O
+│       ├── reporter/              #   Diagnostic sink, provenance, formatters
+│       └── cli/                   #   CLI adapter (cobra/flags)
 ├── pkg/sdk/                       # Public compiler plugin SDK for third-party authors
 ├── .ai/                           # Canonical source tree (compiler input)
 │   ├── manifest.yaml              #   Build defaults, targets, profiles, compiler policy
@@ -152,7 +163,7 @@ Use structured domain errors for compiler operations:
 return fmt.Errorf("parse stage: %w", err)
 
 // Domain-level errors for pipeline failures
-return domain.NewCompilerError(domain.ErrLowering, "capability not supported", target)
+return pipeline.NewCompilerError(pipeline.ErrLowering, "capability not supported", target)
 ```
 
 ## Testing Standards

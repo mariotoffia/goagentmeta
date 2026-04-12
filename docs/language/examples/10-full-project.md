@@ -20,21 +20,21 @@ payment-service/
 │   ├── manifest.yaml
 │   │
 │   ├── instructions/
-│   │   ├── project-overview.yaml        # Always-on project context
-│   │   └── go-standards.yaml           # Go coding standards
+│   │   ├── project-overview.md          # Always-on project context
+│   │   └── go-standards.md             # Go coding standards
 │   │
 │   ├── rules/
-│   │   ├── secrets-policy.yaml         # No credential exposure (required)
-│   │   └── generated-code.yaml         # No edits to generated files
+│   │   ├── secrets-policy.md           # No credential exposure (required)
+│   │   └── generated-code.md           # No edits to generated files
 │   │
 │   ├── skills/
-│   │   ├── go-aws-lambda.yaml          # Lambda dev skill
-│   │   └── payment-processing.yaml     # Domain-specific skill
+│   │   ├── go-aws-lambda.md            # Lambda dev skill
+│   │   └── payment-processing.md       # Domain-specific skill
 │   │
 │   ├── agents/
-│   │   ├── planner.yaml                # Task planner
-│   │   ├── implementer.yaml            # Go implementer
-│   │   └── security-reviewer.yaml      # Security review
+│   │   ├── planner.md                  # Task planner
+│   │   ├── implementer.md              # Go implementer
+│   │   └── security-reviewer.md        # Security review
 │   │
 │   ├── hooks/
 │   │   ├── post-edit-validate.yaml     # gofmt + go vet after each edit
@@ -107,44 +107,46 @@ registries:
 
 ## Instructions
 
-```yaml
-# .ai/instructions/project-overview.yaml
+```markdown
+<!-- .ai/instructions/project-overview.md -->
+---
 id: project-overview
 kind: instruction
 description: Payment service project overview and conventions
 preservation: required
+---
 
-content: |
-  # Payment Service — Agent Guidelines
+# Payment Service — Agent Guidelines
 
-  A Go Lambda microservice for payment transaction processing.
-  Deployed on AWS. PCI-DSS compliant.
+A Go Lambda microservice for payment transaction processing.
+Deployed on AWS. PCI-DSS compliant.
 
-  ## Architecture
-  - Hexagonal architecture: domain → application → port → adapter
-  - All payment logic in `internal/domain/` — no AWS SDK imports there
-  - AWS SDK v2 used only in `internal/adapter/`
+## Architecture
+- Hexagonal architecture: domain → application → port → adapter
+- All payment logic in `internal/domain/` — no AWS SDK imports there
+- AWS SDK v2 used only in `internal/adapter/`
 
-  ## Build Commands
-  ```bash
-  make build    # Build all packages
-  make test     # Run tests with race detection
-  make lint     # golangci-lint
-  make check    # build + lint + test
-  ```
+## Build Commands
+```bash
+make build    # Build all packages
+make test     # Run tests with race detection
+make lint     # golangci-lint
+make check    # build + lint + test
+```
 
-  ## Critical Constraints
-  - **Never** log card numbers, CVVs, or full PANs — even partially
-  - **Never** return raw AWS errors to API callers
-  - All monetary amounts are `int64` cents — never `float64`
+## Critical Constraints
+- **Never** log card numbers, CVVs, or full PANs — even partially
+- **Never** return raw AWS errors to API callers
+- All monetary amounts are `int64` cents — never `float64`
 ```
 
 ---
 
 ## Rules
 
-```yaml
-# .ai/rules/secrets-policy.yaml
+```markdown
+<!-- .ai/rules/secrets-policy.md -->
+---
 id: secrets-policy
 kind: rule
 description: Prevent PCI-DSS credential and card data exposure
@@ -157,54 +159,32 @@ scope:
 conditions:
   - type: language
     value: go
+---
 
-content: |
-  ## PCI-DSS Secret and Card Data Rules
+## PCI-DSS Secret and Card Data Rules
 
-  ### Forbidden in Logs or Errors
-  - Card numbers (PAN), CVV, expiry dates
-  - AWS credentials or tokens
-  - Database connection strings
+### Forbidden in Logs or Errors
+- Card numbers (PAN), CVV, expiry dates
+- AWS credentials or tokens
+- Database connection strings
 
-  ### Required Patterns
-  - Mask PANs in logs: show only last 4 digits
-  - Use `crypto/rand` for token generation
-  - Store card data only via tokenization — never raw
+### Required Patterns
+- Mask PANs in logs: show only last 4 digits
+- Use `crypto/rand` for token generation
+- Store card data only via tokenization — never raw
 ```
 
 ---
 
 ## Skills
 
-```yaml
-# .ai/skills/payment-processing.yaml
+```markdown
+<!-- .ai/skills/payment-processing.md -->
+---
 id: payment-processing
 kind: skill
 description: Domain knowledge for payment transaction processing in Go
 preservation: preferred
-
-content: |
-  ## Payment Processing Skill
-
-  ### Money Representation
-  Always use `int64` cents. Never use `float64` for monetary values.
-
-  ```go
-  type Money struct {
-    AmountCents int64
-    Currency    string // ISO 4217: "USD", "EUR"
-  }
-  ```
-
-  ### Idempotency
-  Every payment operation must be idempotent. Use an `IdempotencyKey`
-  header and store processed keys in DynamoDB with TTL.
-
-  ### Error Handling
-  Never return raw payment processor errors to API callers.
-  Map to internal error codes: `ErrInsufficientFunds`, `ErrCardDeclined`, etc.
-
-  Consult `references/payment-api-contracts.md` for the full error code mapping.
 
 requires:
   - filesystem.read
@@ -231,6 +211,29 @@ allowedTools:
   - Grep
   - Glob
   - "Bash(go:*)"
+---
+
+## Payment Processing Skill
+
+### Money Representation
+Always use `int64` cents. Never use `float64` for monetary values.
+
+```go
+type Money struct {
+  AmountCents int64
+  Currency    string // ISO 4217: "USD", "EUR"
+}
+```
+
+### Idempotency
+Every payment operation must be idempotent. Use an `IdempotencyKey`
+header and store processed keys in DynamoDB with TTL.
+
+### Error Handling
+Never return raw payment processor errors to API callers.
+Map to internal error codes: `ErrInsufficientFunds`, `ErrCardDeclined`, etc.
+
+Consult `references/payment-api-contracts.md` for the full error code mapping.
 ```
 
 ---

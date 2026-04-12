@@ -6,38 +6,30 @@ An **Agent** is a specialized delegate or orchestration wrapper. Agents define a
 
 ## Quick Example
 
-```yaml
+The primary authoring format is a **Markdown file with YAML frontmatter**:
+
+```markdown
+---
 id: go-implementer
 kind: agent
 description: Implement Go services with tests and documentation
 preservation: preferred
-
-rolePrompt: |
-  You are a Go implementation specialist.
-  Produce minimal, correct code changes with full test coverage.
-  Follow the project's hexagonal architecture conventions.
-  Always run `go vet` and `golangci-lint` before reporting completion.
-
 skills:
   - go-aws-lambda
   - golang-benchmark
-
 requires:
   - filesystem.read
   - filesystem.write
   - terminal.exec
   - repo.search
-
 toolPolicy:
   filesystem.write: allow
   terminal.exec: allow
   network.http: deny
-
 delegation:
   mayCall:
     - test-runner
     - docs-generator
-
 handoffs:
   - label: Start Review
     agent: security-reviewer
@@ -45,12 +37,18 @@ handoffs:
       Review the implementation above for security issues.
       Pay special attention to input validation and credential handling.
     autoSend: false
-
 hooks:
   - post-edit-validate
-
 model: claude-opus-4
+---
+
+You are a Go implementation specialist.
+Produce minimal, correct code changes with full test coverage.
+Follow the project's hexagonal architecture conventions.
+Always run `go vet` and `golangci-lint` before reporting completion.
 ```
+
+Save this as `.ai/agents/go-implementer.md`. The frontmatter holds all structured agent metadata; the body becomes the agent's system prompt (rolePrompt).
 
 ---
 

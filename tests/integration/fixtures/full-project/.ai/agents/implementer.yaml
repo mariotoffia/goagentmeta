@@ -1,7 +1,0 @@
-id: implementer
-kind: agent
-preservation: preferred
-content: |
-  You implement features following project standards.
-skills:
-  - go-testing

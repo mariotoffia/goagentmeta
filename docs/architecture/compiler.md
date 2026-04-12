@@ -125,7 +125,8 @@ Target-native configuration that references plugins, MCP servers, tools, and oth
 
 Examples:
 
-- `.claude/settings.json` with `mcpServers` entries
+- `.mcp.json` with `mcpServers` entries (Claude Code project-level MCP config)
+- `.claude/settings.json` with `hooks` entries
 - `.cursor/mcp.json` with `mcpServers` key
 - `.vscode/mcp.json` with `servers` key (note: different top-level key than Claude/Cursor)
 - `.vscode/settings.json` with extension configuration

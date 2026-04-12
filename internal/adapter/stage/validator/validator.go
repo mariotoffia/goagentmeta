@@ -6,6 +6,7 @@ import (
 
 	"github.com/mariotoffia/goagentmeta/internal/application/compiler"
 	"github.com/mariotoffia/goagentmeta/internal/domain/pipeline"
+	"github.com/mariotoffia/goagentmeta/internal/domain/tool"
 	"github.com/mariotoffia/goagentmeta/internal/port/stage"
 )
 
@@ -29,15 +30,30 @@ type Stage struct {
 }
 
 // New creates a new validator Stage with loaded schemas.
-func New() (*Stage, error) {
+func New(opts ...ValidatorOption) (*Stage, error) {
 	sv, err := NewStructuralValidator()
 	if err != nil {
 		return nil, fmt.Errorf("create structural validator: %w", err)
 	}
-	return &Stage{
+	s := &Stage{
 		structural: sv,
 		semantic:   NewSemanticValidator(),
-	}, nil
+	}
+	for _, o := range opts {
+		o(s)
+	}
+	return s, nil
+}
+
+// ValidatorOption configures the validator stage.
+type ValidatorOption func(*Stage)
+
+// WithToolRegistry configures the validator to validate tool expressions
+// against the given tool plugin registry.
+func WithToolRegistry(r *tool.Registry) ValidatorOption {
+	return func(s *Stage) {
+		s.semantic.WithToolRegistry(r)
+	}
 }
 
 // Descriptor returns the stage metadata for pipeline registration.

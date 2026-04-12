@@ -220,6 +220,7 @@ security:
   permissions:
     filesystem: read-repo
     network: outbound
+    processExec: true
     secrets:
       - GITHUB_TOKEN
       - AWS_ACCESS_KEY_ID
@@ -230,7 +231,37 @@ security:
 | `security.trust` | string | Trust level: `verified-publisher`, `review-required`, `untrusted` |
 | `security.permissions.filesystem` | string | Filesystem access: `none`, `read-repo`, `read-write` |
 | `security.permissions.network` | string | Network access: `none`, `outbound`, `inbound`, `bidirectional` |
+| `security.permissions.processExec` | bool | Whether the plugin may spawn child processes (default: `false`) |
 | `security.permissions.secrets` | []string | Environment variable names containing secrets the plugin needs |
+
+### `selection`
+
+Controls how the compiler selects this plugin during capability resolution.
+
+```yaml
+selection: auto-if-selected   # auto-if-selected | opt-in | manual-only | disabled
+```
+
+| Value | Description |
+|---|---|
+| `auto-if-selected` | Automatically selected when a skill/agent requires one of its capabilities (default) |
+| `opt-in` | Only selected when explicitly referenced by name in a manifest or profile |
+| `manual-only` | Requires manual approval (e.g., interactive prompt during build) |
+| `disabled` | Plugin is present but never selected |
+
+### `install`
+
+Controls how the compiler materializes the plugin's artifacts.
+
+```yaml
+install: materialize           # materialize | reference-only | auto-detect
+```
+
+| Value | Description |
+|---|---|
+| `materialize` | Copy all plugin artifacts into the build output directory |
+| `reference-only` | Emit only a reference/config entry; do not copy files (typical for external plugins) |
+| `auto-detect` | Compiler decides based on distribution mode: inline→materialize, external→reference-only |
 
 ### `artifacts` (inline mode only)
 
@@ -239,11 +270,17 @@ artifacts:
   scripts:
     - scripts/plugins/repo-graph/server.sh
     - scripts/plugins/repo-graph/init.sh
+  configs:
+    - configs/repo-graph.json
+  manifests:
+    - manifests/repo-graph-package.yaml
 ```
 
 | Field | Type | Description |
 |---|---|---|
 | `artifacts.scripts` | []string | Relative paths to scripts that implement the inline plugin |
+| `artifacts.configs` | []string | Relative paths to configuration files bundled with the plugin |
+| `artifacts.manifests` | []string | Relative paths to manifest/metadata files describing the plugin package |
 
 ### `targets`
 

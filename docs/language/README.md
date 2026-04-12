@@ -29,10 +29,10 @@ Every project that uses goagentmeta contains a `.ai/` directory at the repositor
 ```
 .ai/
 ├── manifest.yaml          # Build defaults, targets, profiles, compiler policy
-├── instructions/          # Always-on guidance files (*.yaml or *.md)
-├── rules/                 # Conditional/scoped policy files (*.yaml)
-├── skills/                # Reusable workflow bundle definitions (*.yaml or SKILL.md)
-├── agents/                # Specialized delegate definitions (*.yaml)
+├── instructions/          # Always-on guidance files (*.md with YAML frontmatter)
+├── rules/                 # Conditional/scoped policy files (*.md with YAML frontmatter)
+├── skills/                # Reusable workflow bundle definitions (*.md with YAML frontmatter)
+├── agents/                # Specialized delegate definitions (*.md with YAML frontmatter)
 ├── hooks/                 # Lifecycle automation definitions (*.yaml)
 ├── commands/              # User-invoked entry points (*.yaml)
 ├── capabilities/          # Abstract capability contracts (*.yaml)

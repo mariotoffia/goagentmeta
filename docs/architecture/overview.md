@@ -81,12 +81,23 @@ internal/
     reporter/               #   Reporting and provenance port
     stage/                  #   Pipeline stage port (compiler plugin SPI)
   adapter/                  # Infrastructure adapters
-    parser/                 #   YAML/Markdown parser adapter
+    cli/                    #   CLI adapter (cobra/flags)
+    filesystem/             #   Filesystem adapter
+    plugin/                 #   Plugin adapter
     registry/               #   Registry client adapters (HTTP, git, filesystem)
     renderer/               #   Target renderer backends (claude, cursor, copilot, codex)
-    materializer/           #   File/symlink materializer
-    cli/                    #   CLI adapter (cobra/flags)
+    reporter/               #   Reporter adapter
     stage/                  #   Built-in pipeline stage implementations
+      capability/           #     Capability resolution stage
+      lowering/             #     Lowering stage
+      materializer/         #     File/symlink materializer stage
+      normalizer/           #     Normalization stage
+      parser/               #     YAML/Markdown parser stage
+      planner/              #     Build plan stage
+      reporter/             #     Report generation stage
+      resolver/             #     Dependency resolution stage
+      validator/            #     Validation stage
+    tool/                   #   Tool plugin adapters
 pkg/                        # Public API types shared with external tools
   sdk/                      # Compiler plugin SDK for third-party stage/renderer authors
 ```

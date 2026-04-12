@@ -7,7 +7,9 @@ package dependency
 import (
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/mariotoffia/goagentmeta/internal/domain/pipeline"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,11 +38,58 @@ type RegistryConfig struct {
 	Auth string `yaml:"auth,omitempty"`
 }
 
+// CompilerConfig holds compiler pipeline configuration from the manifest.
+type CompilerConfig struct {
+	ExternalPlugins []ExternalPluginEntry `yaml:"externalPlugins"`
+}
+
+// ExternalPluginEntry describes an external process plugin that communicates
+// over stdin/stdout with JSON serialization.
+type ExternalPluginEntry struct {
+	Name   string `yaml:"name"`
+	Source string `yaml:"source"`         // Must start with "external://"
+	Phase  string `yaml:"phase"`          // Must be a valid pipeline phase name
+	Order  int    `yaml:"order"`
+	Target string `yaml:"target,omitempty"` // Optional target filter
+}
+
+// Validate checks that the ExternalPluginEntry has valid field values.
+func (e *ExternalPluginEntry) Validate() error {
+	if e.Name == "" {
+		return fmt.Errorf("external plugin: name must not be empty")
+	}
+	if !strings.HasPrefix(e.Source, "external://") {
+		return fmt.Errorf("external plugin %q: source must start with %q, got %q", e.Name, "external://", e.Source)
+	}
+	if _, ok := pipeline.ParsePhase(e.Phase); !ok {
+		return fmt.Errorf("external plugin %q: invalid phase %q (valid: %s)",
+			e.Name, e.Phase, strings.Join(pipeline.ValidPhaseNames(), ", "))
+	}
+	return nil
+}
+
+// Validate checks that all external plugin entries are valid and that names are unique.
+func (c *CompilerConfig) Validate() error {
+	seen := make(map[string]struct{}, len(c.ExternalPlugins))
+	for i := range c.ExternalPlugins {
+		entry := &c.ExternalPlugins[i]
+		if err := entry.Validate(); err != nil {
+			return err
+		}
+		if _, dup := seen[entry.Name]; dup {
+			return fmt.Errorf("external plugin %q: duplicate name", entry.Name)
+		}
+		seen[entry.Name] = struct{}{}
+	}
+	return nil
+}
+
 // Manifest is the top-level manifest.yaml structure. Only the fields
 // needed by the dependency resolver are decoded; the rest is ignored.
 type Manifest struct {
 	Dependencies map[string]dependencyEntry `yaml:"dependencies"`
 	Registries   []RegistryConfig           `yaml:"registries"`
+	Compiler     CompilerConfig             `yaml:"compiler"`
 }
 
 // dependencyEntry supports both short and extended dependency formats:
@@ -94,6 +143,10 @@ func ParseManifest(path string) (*Manifest, error) {
 	var m Manifest
 	if err := yaml.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf("dependency: parse manifest %q: %w", path, err)
+	}
+
+	if err := m.Compiler.Validate(); err != nil {
+		return nil, fmt.Errorf("dependency: manifest %q: %w", path, err)
 	}
 
 	return &m, nil

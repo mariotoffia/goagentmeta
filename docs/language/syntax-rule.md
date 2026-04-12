@@ -8,7 +8,10 @@ Some targets do not have a native concept of "conditional rules" and require the
 
 ## Quick Example
 
-```yaml
+The primary authoring format is a **Markdown file with YAML frontmatter**:
+
+```markdown
+---
 id: go-security-rules
 kind: rule
 description: Security policy for Go source files
@@ -20,14 +23,17 @@ scope:
 conditions:
   - type: language
     value: go
-content: |
-  ## Go Security Rules
+---
 
-  - Never log secrets, tokens, or credentials
-  - Always validate and sanitize external input before use
-  - Use `crypto/rand` for cryptographic randomness; never `math/rand`
-  - Prefer `net/http` timeouts: always set `ReadTimeout`, `WriteTimeout`, and `IdleTimeout`
+## Go Security Rules
+
+- Never log secrets, tokens, or credentials
+- Always validate and sanitize external input before use
+- Use `crypto/rand` for cryptographic randomness; never `math/rand`
+- Prefer `net/http` timeouts: always set `ReadTimeout`, `WriteTimeout`, and `IdleTimeout`
 ```
+
+Save this as `.ai/rules/go-security-rules.md`. The frontmatter holds metadata and conditions; the body is the rule content.
 
 ---
 
@@ -47,18 +53,27 @@ See [ObjectMeta reference](README.md#common-envelope--objectmeta) for full field
 | `extends` | Inherit from a base rule and override specific conditions or content |
 | `targetOverrides` | Adjust lowering hints or disable for specific targets |
 
-### `content`
+### Content (Markdown Body)
 
-```yaml
-content: |
-  ## Rule Content
+The rule content is the Markdown body that follows the closing `---` of the frontmatter:
 
-  This is the policy text injected when the rule's conditions are met.
+```markdown
+---
+id: example-rule
+kind: rule
+conditions:
+  - type: language
+    value: go
+---
+
+## Rule Content
+
+This is the policy text injected when the rule's conditions are met.
 ```
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `content` | string | yes | Markdown policy text. Injected into the AI context when all conditions are satisfied. |
+| Part | Required | Description |
+|---|---|---|
+| Markdown body | yes | Policy text after the frontmatter `---`. Injected into the AI context when all conditions are satisfied. |
 
 ### `conditions`
 
@@ -97,7 +112,8 @@ conditions:
 
 `scope` and `conditions` are complementary. **Scope** defines the addressable domain — which files and directories the rule is registered for. **Conditions** define the activation predicate evaluated at runtime.
 
-```yaml
+```markdown
+---
 id: api-input-validation
 kind: rule
 scope:
@@ -107,8 +123,9 @@ scope:
 conditions:
   - type: path-pattern
     value: "**/handler_*.go"   # Only activates for handler files
-content: |
-  Always validate and sanitize all HTTP request parameters before use.
+---
+
+Always validate and sanitize all HTTP request parameters before use.
 ```
 
 ---
@@ -128,8 +145,10 @@ When a target cannot preserve condition semantics and `preservation: required`, 
 
 ## Inheritance Example
 
-```yaml
-# Base rule: applies to all Go files
+Base rule — applies to all Go files:
+
+```markdown
+---
 id: base-go-rule
 kind: rule
 scope:
@@ -137,10 +156,15 @@ scope:
 conditions:
   - type: language
     value: go
-content: |
-  Always run `go vet` before committing.
+---
 
-# Derived rule: narrows to security-sensitive services paths
+Always run `go vet` before committing.
+```
+
+Derived rule — narrows to security-sensitive services paths:
+
+```markdown
+---
 id: go-secrets-rule
 kind: rule
 extends:
@@ -149,8 +173,9 @@ scope:
   paths:
     - "services/auth/**"
     - "services/payments/**"
-content: |
-  Never log `*http.Request` bodies or form values — they may contain credentials.
+---
+
+Never log `*http.Request` bodies or form values — they may contain credentials.
 ```
 
 ---

@@ -5,18 +5,21 @@ import (
 
 	"github.com/mariotoffia/goagentmeta/internal/adapter/filesystem"
 	registryadapter "github.com/mariotoffia/goagentmeta/internal/adapter/registry"
-	reporteradapter "github.com/mariotoffia/goagentmeta/internal/adapter/reporter"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/renderer/claude"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/renderer/codex"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/renderer/copilot"
+	cursorrenderer "github.com/mariotoffia/goagentmeta/internal/adapter/renderer/cursor"
+	reporteradapter "github.com/mariotoffia/goagentmeta/internal/adapter/reporter"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/capability"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/lowering"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/materializer"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/normalizer"
+	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/parser"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/planner"
 	reporterstage "github.com/mariotoffia/goagentmeta/internal/adapter/stage/reporter"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/resolver"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/validator"
+	adaptortool "github.com/mariotoffia/goagentmeta/internal/adapter/tool"
 	"github.com/mariotoffia/goagentmeta/internal/application/compiler"
 	"github.com/mariotoffia/goagentmeta/internal/application/dependency"
 	"github.com/mariotoffia/goagentmeta/internal/domain/build"
@@ -83,7 +86,9 @@ func wirePipeline(cfg buildConfig) (*compiler.Pipeline, error) {
 	}
 
 	// Build stages
-	valStage, err := validator.New()
+	toolReg := adaptortool.NewDefaultRegistry()
+
+	valStage, err := validator.New(validator.WithToolRegistry(toolReg))
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +106,8 @@ func wirePipeline(cfg buildConfig) (*compiler.Pipeline, error) {
 		compiler.WithFailFast(cfg.failFast),
 		compiler.WithProfile(cfg.profile),
 
-		// Stages: validate → resolve → normalize → plan → capability → lower → render → materialize → report
+		// Stages: parse → validate → resolve → normalize → plan → capability → lower → render → materialize → report
+		compiler.WithStage(parser.New()),
 		compiler.WithStage(valStage),
 		compiler.WithStage(resolver.New(depResolver)),
 		compiler.WithStage(normalizer.New(fsReader)),
@@ -129,7 +135,7 @@ func wirePipeline(cfg buildConfig) (*compiler.Pipeline, error) {
 		case build.TargetCopilot:
 			opts = append(opts, compiler.WithStage(copilot.New(objects)))
 		case build.TargetCursor:
-			// Cursor renderer not yet implemented; skip silently.
+			opts = append(opts, compiler.WithStage(cursorrenderer.New(objects)))
 		}
 	}
 	opts = append(opts, compiler.WithTargets(targets...))

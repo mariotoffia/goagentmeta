@@ -8,7 +8,9 @@ import (
 	"github.com/mariotoffia/goagentmeta/internal/adapter/filesystem"
 	reporteradapter "github.com/mariotoffia/goagentmeta/internal/adapter/reporter"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/normalizer"
+	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/parser"
 	"github.com/mariotoffia/goagentmeta/internal/adapter/stage/validator"
+	adaptortool "github.com/mariotoffia/goagentmeta/internal/adapter/tool"
 	"github.com/mariotoffia/goagentmeta/internal/application/compiler"
 	"github.com/mariotoffia/goagentmeta/internal/domain/build"
 	"github.com/spf13/cobra"
@@ -37,7 +39,9 @@ func runValidate(cmd *cobra.Command, args []string) error {
 	fsReader := filesystem.NewOSReader()
 	sink := reporteradapter.NewDiagnosticSink()
 
-	valStage, err := validator.New()
+	toolReg := adaptortool.NewDefaultRegistry()
+
+	valStage, err := validator.New(validator.WithToolRegistry(toolReg))
 	if err != nil {
 		return fmt.Errorf("create validator: %w", err)
 	}
@@ -47,6 +51,7 @@ func runValidate(cmd *cobra.Command, args []string) error {
 		compiler.WithDiagnosticSink(sink),
 		compiler.WithFailFast(true),
 		compiler.WithProfile(build.ProfileLocalDev),
+		compiler.WithStage(parser.New()),
 		compiler.WithStage(valStage),
 		compiler.WithStage(normalizer.New(fsReader)),
 	)

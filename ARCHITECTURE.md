@@ -37,7 +37,7 @@ For detailed specifications, see [`docs/architecture/`](docs/architecture/).
 │        │                                                     │
 │  ┌─────┴──────────────────────────────────────────────────┐  │
 │  │                    Domain Model                        │  │
-│  │  model · capability · plugin · build · pipeline        │  │
+│  │  model · capability · plugin · build · pipeline · tool │  │
 │  └────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -208,3 +208,77 @@ Output is written to `.ai-build/{target}/{profile}/` with full provenance.
 | [schemas.md](docs/architecture/schemas.md) | YAML schema sketches for canonical objects |
 | [marketplace.md](docs/architecture/marketplace.md) | Package distribution, registry, trust policies |
 | [editor-tooling.md](docs/architecture/editor-tooling.md) | VS Code extension, LSP, preview |
+
+---
+
+## Authoring Format: Markdown with YAML Frontmatter
+
+Objects that have a body (instruction, rule, skill, agent) are authored as **Markdown files with YAML frontmatter**. The frontmatter (between `---` delimiters) carries structured metadata; the body carries the content:
+
+```markdown
+---
+id: my-skill
+kind: skill
+description: Example skill
+allowedTools:
+  - Read
+  - "Bash(go:*)"
+---
+
+This is the skill body with **markdown** content.
+```
+
+Objects without a body (hook, command, capability, plugin) remain pure `.yaml` files. Scripts are standalone executable files referenced by path.
+
+| Kind | File format | Body becomes |
+|---|---|---|
+| instruction | `.md` (frontmatter) | `Instruction.Content` |
+| rule | `.md` (frontmatter) | `Rule.Content` |
+| skill | `.md` (frontmatter) | `Skill.Content` |
+| agent | `.md` (frontmatter) | `Agent.RolePrompt` |
+| hook | `.yaml` | — (references scripts via `action.ref`) |
+| command | `.yaml` | — (references actions) |
+| capability | `.yaml` | — (no body) |
+| plugin | `.yaml` | — (no body) |
+
+The parser stage (`PhaseParse`) reads both `.md` and `.yaml` files. For body-carrying types (instruction, rule, skill, agent), always use `.md` with YAML frontmatter.
+
+---
+
+## Tool Plugin System
+
+Tool expressions (`Skill.allowedTools`, `Agent.toolPolicy`) are validated by a pluggable **tool plugin registry**. Each plugin declares a keyword, optional syntax grammar, and validation logic.
+
+```
+┌─────────────────────────────────────────────────────┐
+│                 Tool Plugin Registry                 │
+│                                                     │
+│  ┌──────────┐ ┌─────────┐ ┌───────────┐ ┌───────┐  │
+│  │ Bash     │ │  Read   │ │ WebSearch │ │  mcp  │  │
+│  │Bash(c:g) │ │  bare   │ │   bare    │ │mcp__…│  │
+│  └──────────┘ └─────────┘ └───────────┘ └───────┘  │
+│  ... + Edit, Write, Glob, Grep, Agent, Task, ...    │
+└───────────────────────┬─────────────────────────────┘
+                        │ ValidateExpression(expr)
+                        ▼
+              ┌─────────────────────┐
+              │  Semantic Validator  │
+              │  (PhaseValidate)     │
+              └─────────────────────┘
+```
+
+Three expression forms:
+- **Bare keyword:** `Read`, `WebSearch`
+- **Parenthesized:** `Bash(go:*)` — plugin-specific grammar
+- **MCP double-underscore:** `mcp__github__list-repos`
+
+See [syntax-tool-plugin.md](docs/language/syntax-tool-plugin.md) for the full tool plugin reference and authoring guide.
+
+---
+
+## Further Reading
+
+- [docs/architecture/abstractions.md](docs/architecture/abstractions.md) — Complete type inventory by bounded context
+- [docs/architecture/overview.md](docs/architecture/overview.md) — Master architecture specification
+- [docs/architecture/compiler.md](docs/architecture/compiler.md) — Pipeline and plugin architecture
+- [docs/language/README.md](docs/language/README.md) — Language reference and syntax docs

@@ -73,7 +73,9 @@ func parseSourceDir(t *testing.T, rootDir, sourceDir string) *pipeline.SourceTre
 			continue
 		}
 		for _, entry := range entries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+			isMD := strings.HasSuffix(entry.Name(), ".md")
+			isYAML := strings.HasSuffix(entry.Name(), ".yaml") || strings.HasSuffix(entry.Name(), ".yml")
+			if entry.IsDir() || (!isMD && !isYAML) {
 				continue
 			}
 			filePath := filepath.Join(subPath, entry.Name())
@@ -81,7 +83,12 @@ func parseSourceDir(t *testing.T, rootDir, sourceDir string) *pipeline.SourceTre
 			if err != nil {
 				t.Fatalf("reading fixture %s: %v", filePath, err)
 			}
-			obj := parseYAMLObject(t, data, filePath)
+			var obj pipeline.RawObject
+			if isMD {
+				obj = parseMarkdownObject(t, data, filePath)
+			} else {
+				obj = parseYAMLObject(t, data, filePath)
+			}
 			tree.Objects = append(tree.Objects, obj)
 		}
 	}
@@ -173,6 +180,91 @@ func parseYAMLObject(t *testing.T, data []byte, sourcePath string) pipeline.RawO
 		Meta:       meta,
 		SourcePath: sourcePath,
 		RawContent: rawContent,
+		RawFields:  rawFields,
+	}
+}
+
+// parseMarkdownObject parses a Markdown file with YAML frontmatter into a pipeline.RawObject.
+func parseMarkdownObject(t *testing.T, data []byte, sourcePath string) pipeline.RawObject {
+	t.Helper()
+
+	content := string(data)
+
+	// Split frontmatter from body.
+	if !strings.HasPrefix(content, "---") {
+		t.Fatalf("markdown file %s does not start with ---", sourcePath)
+	}
+	rest := content[3:]
+	idx := strings.Index(rest, "\n---")
+	if idx < 0 {
+		t.Fatalf("markdown file %s has no closing --- delimiter", sourcePath)
+	}
+	frontmatter := rest[:idx]
+	body := strings.TrimSpace(rest[idx+4:])
+
+	// Parse frontmatter as YAML.
+	var raw map[string]any
+	if err := yaml.Unmarshal([]byte(frontmatter), &raw); err != nil {
+		t.Fatalf("parsing frontmatter of %s: %v", sourcePath, err)
+	}
+
+	meta := model.ObjectMeta{}
+
+	if id, ok := raw["id"].(string); ok {
+		meta.ID = id
+	}
+	if kind, ok := raw["kind"].(string); ok {
+		meta.Kind = model.Kind(kind)
+	}
+	if v, ok := raw["version"].(int); ok {
+		meta.Version = v
+	}
+	if desc, ok := raw["description"].(string); ok {
+		meta.Description = desc
+	}
+	if pres, ok := raw["preservation"].(string); ok {
+		meta.Preservation = model.Preservation(pres)
+	}
+	if owner, ok := raw["owner"].(string); ok {
+		meta.Owner = owner
+	}
+	if extends, ok := raw["extends"].([]any); ok {
+		meta.Extends = toStringSlice(extends)
+	}
+	if labels, ok := raw["labels"].([]any); ok {
+		meta.Labels = toStringSlice(labels)
+	}
+	if scopeMap, ok := raw["scope"].(map[string]any); ok {
+		meta.Scope = extractScope(scopeMap)
+	}
+	if atMap, ok := raw["appliesTo"].(map[string]any); ok {
+		meta.AppliesTo = extractAppliesTo(atMap)
+	}
+
+	// Build RawFields from non-meta fields.
+	metaKeys := map[string]bool{
+		"id": true, "kind": true, "version": true, "description": true,
+		"preservation": true, "scope": true, "appliesTo": true,
+		"extends": true, "labels": true, "owner": true, "targetOverrides": true,
+		"packageVersion": true, "license": true,
+	}
+	rawFields := make(map[string]any)
+	for k, v := range raw {
+		if !metaKeys[k] {
+			rawFields[k] = v
+		}
+	}
+
+	// Mirror the YAML parser: downstream lowering stages read
+	// ResolvedFields["content"], so populate the key from the body.
+	if body != "" {
+		rawFields["content"] = body
+	}
+
+	return pipeline.RawObject{
+		Meta:       meta,
+		SourcePath: sourcePath,
+		RawContent: body,
 		RawFields:  rawFields,
 	}
 }

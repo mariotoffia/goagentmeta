@@ -258,3 +258,225 @@ registries:
 		t.Errorf("Registries len = %d, want 1", len(m.Registries))
 	}
 }
+
+func TestParseManifest_CompilerExternalPlugins(t *testing.T) {
+	tests := []struct {
+		name      string
+		yaml      string
+		wantErr   bool
+		errSubstr string
+		check     func(t *testing.T, m *dependency.Manifest)
+	}{
+		{
+			name: "valid external plugins",
+			yaml: `compiler:
+  externalPlugins:
+    - name: my-linter
+      source: "external://path/to/linter"
+      phase: validate
+      order: 10
+      target: go
+    - name: my-renderer
+      source: "external://path/to/renderer"
+      phase: render
+      order: 20
+`,
+			check: func(t *testing.T, m *dependency.Manifest) {
+				t.Helper()
+				if len(m.Compiler.ExternalPlugins) != 2 {
+					t.Fatalf("got %d plugins, want 2", len(m.Compiler.ExternalPlugins))
+				}
+				p := m.Compiler.ExternalPlugins[0]
+				if p.Name != "my-linter" {
+					t.Errorf("Name = %q, want %q", p.Name, "my-linter")
+				}
+				if p.Source != "external://path/to/linter" {
+					t.Errorf("Source = %q, want %q", p.Source, "external://path/to/linter")
+				}
+				if p.Phase != "validate" {
+					t.Errorf("Phase = %q, want %q", p.Phase, "validate")
+				}
+				if p.Order != 10 {
+					t.Errorf("Order = %d, want 10", p.Order)
+				}
+				if p.Target != "go" {
+					t.Errorf("Target = %q, want %q", p.Target, "go")
+				}
+				p2 := m.Compiler.ExternalPlugins[1]
+				if p2.Name != "my-renderer" {
+					t.Errorf("Name = %q, want %q", p2.Name, "my-renderer")
+				}
+				if p2.Target != "" {
+					t.Errorf("Target = %q, want empty", p2.Target)
+				}
+			},
+		},
+		{
+			name: "empty compiler section",
+			yaml: `compiler: {}
+`,
+			check: func(t *testing.T, m *dependency.Manifest) {
+				t.Helper()
+				if len(m.Compiler.ExternalPlugins) != 0 {
+					t.Errorf("got %d plugins, want 0", len(m.Compiler.ExternalPlugins))
+				}
+			},
+		},
+		{
+			name: "no compiler section (backward compatible)",
+			yaml: `schemaVersion: 1
+dependencies:
+  pkg-a: "^1.0.0"
+`,
+			check: func(t *testing.T, m *dependency.Manifest) {
+				t.Helper()
+				if len(m.Compiler.ExternalPlugins) != 0 {
+					t.Errorf("got %d plugins, want 0", len(m.Compiler.ExternalPlugins))
+				}
+				if len(m.Dependencies) != 1 {
+					t.Errorf("got %d deps, want 1", len(m.Dependencies))
+				}
+			},
+		},
+		{
+			name: "duplicate plugin names",
+			yaml: `compiler:
+  externalPlugins:
+    - name: dup
+      source: "external://a"
+      phase: parse
+      order: 1
+    - name: dup
+      source: "external://b"
+      phase: render
+      order: 2
+`,
+			wantErr:   true,
+			errSubstr: "duplicate name",
+		},
+		{
+			name: "source without external prefix",
+			yaml: `compiler:
+  externalPlugins:
+    - name: bad-src
+      source: "http://wrong"
+      phase: parse
+      order: 1
+`,
+			wantErr:   true,
+			errSubstr: `source must start with`,
+		},
+		{
+			name: "empty name",
+			yaml: `compiler:
+  externalPlugins:
+    - name: ""
+      source: "external://x"
+      phase: parse
+      order: 1
+`,
+			wantErr:   true,
+			errSubstr: "name must not be empty",
+		},
+		{
+			name: "invalid phase name",
+			yaml: `compiler:
+  externalPlugins:
+    - name: bad-phase
+      source: "external://x"
+      phase: nonexistent
+      order: 1
+`,
+			wantErr:   true,
+			errSubstr: "invalid phase",
+		},
+		{
+			name: "valid config passes validation",
+			yaml: `compiler:
+  externalPlugins:
+    - name: ok-plugin
+      source: "external://bin/ok"
+      phase: lower
+      order: 5
+`,
+			check: func(t *testing.T, m *dependency.Manifest) {
+				t.Helper()
+				if err := m.Compiler.Validate(); err != nil {
+					t.Errorf("Validate() returned unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "round-trip: all fields populated",
+			yaml: `dependencies:
+  lib-x: "^2.0.0"
+registries:
+  - name: corp
+    type: http
+    url: https://r.example.com
+compiler:
+  externalPlugins:
+    - name: fmt-plugin
+      source: "external://bin/fmt"
+      phase: normalize
+      order: 3
+      target: typescript
+`,
+			check: func(t *testing.T, m *dependency.Manifest) {
+				t.Helper()
+				if len(m.Dependencies) != 1 {
+					t.Fatalf("Dependencies len = %d, want 1", len(m.Dependencies))
+				}
+				if len(m.Registries) != 1 {
+					t.Fatalf("Registries len = %d, want 1", len(m.Registries))
+				}
+				if len(m.Compiler.ExternalPlugins) != 1 {
+					t.Fatalf("ExternalPlugins len = %d, want 1", len(m.Compiler.ExternalPlugins))
+				}
+				p := m.Compiler.ExternalPlugins[0]
+				if p.Name != "fmt-plugin" || p.Source != "external://bin/fmt" ||
+					p.Phase != "normalize" || p.Order != 3 || p.Target != "typescript" {
+					t.Errorf("unexpected plugin values: %+v", p)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := mustTempDir(t)
+			path := filepath.Join(dir, "manifest.yaml")
+			writeFile(t, path, tt.yaml)
+
+			m, err := dependency.ParseManifest(path)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				if tt.errSubstr != "" && !contains(err.Error(), tt.errSubstr) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.errSubstr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.check != nil {
+				tt.check(t, m)
+			}
+		})
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && searchSubstr(s, substr)
+}
+
+func searchSubstr(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}

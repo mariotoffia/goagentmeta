@@ -8,23 +8,30 @@ Instructions are distinct from [Rules](syntax-rule.md): rules are conditional or
 
 ## Quick Example
 
-```yaml
+The primary authoring format is a **Markdown file with YAML frontmatter**:
+
+```markdown
+---
 id: go-standards
 kind: instruction
 description: Go coding standards and conventions
 preservation: preferred
 scope:
   fileTypes: [".go"]
-content: |
-  ## Go Coding Standards
+---
 
-  - Use Go 1.24+ features including structured concurrency
-  - Follow Effective Go guidelines
-  - Context-first APIs: always pass `context.Context` as the first argument
-  - Wrap errors with `fmt.Errorf("operation: %w", err)` to preserve stack context
-  - Table-driven tests with subtests (`t.Run`) for all exported functions
-  - No `init()` functions except for test fixtures
+## Go Coding Standards
+
+- Use Go 1.24+ features including structured concurrency
+- Follow Effective Go guidelines
+- Context-first APIs: always pass `context.Context` as the first argument
+- Wrap errors with `fmt.Errorf("operation: %w", err)` to preserve stack context
+- Table-driven tests with subtests (`t.Run`) for all exported functions
+- No `init()` functions except for test fixtures
 ```
+
+Save this as `.ai/instructions/go-standards.md`. The frontmatter (between `---` delimiters) holds the metadata; everything after the closing `---` becomes the instruction content.
+
 
 ---
 
@@ -46,18 +53,23 @@ See [ObjectMeta reference](README.md#common-envelope--objectmeta) for full field
 | `labels` | Tags for grouping (e.g., `security`, `testing`, `go`) |
 | `targetOverrides` | Adjust file placement or disable for specific targets |
 
-### `content`
+### Content (Markdown body)
 
-```yaml
-content: |
-  ## Architecture Principles
-  Always use hexagonal architecture with clean dependency rules.
-  Dependencies must point inward: adapters → application → domain.
+```markdown
+---
+id: arch-principles
+kind: instruction
+---
+
+## Architecture Principles
+
+Always use hexagonal architecture with clean dependency rules.
+Dependencies must point inward: adapters → application → domain.
 ```
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `content` | string | yes | Markdown text injected into the AI context. Supports full Markdown including headers, lists, code blocks, and tables. |
+| Part | Required | Description |
+|---|---|---|
+| Markdown body after frontmatter | yes | Everything after the closing `---` is the instruction content. Supports full Markdown including headers, lists, code blocks, and tables. |
 
 ---
 
@@ -65,37 +77,40 @@ content: |
 
 An instruction with no `scope` applies globally (repository root):
 
-```yaml
-# Applies everywhere — all files, all directories
+```markdown
+---
 id: always-on-policy
 kind: instruction
-content: |
-  All code must pass CI before merging.
+---
+
+All code must pass CI before merging.
 ```
 
 An instruction with `scope.paths` applies only to matching subtrees:
 
-```yaml
-# Applies only within the services/ subtree
+```markdown
+---
 id: services-standards
 kind: instruction
 scope:
   paths:
     - "services/**"
-content: |
-  Each service must expose a /healthz endpoint.
+---
+
+Each service must expose a /healthz endpoint.
 ```
 
 An instruction with `scope.fileTypes` applies only when the AI is working with matching files:
 
-```yaml
-# Applies only to Go files
+```markdown
+---
 id: go-error-handling
 kind: instruction
 scope:
   fileTypes: [".go"]
-content: |
-  Always check returned errors. Never assign errors to `_`.
+---
+
+Always check returned errors. Never assign errors to `_`.
 ```
 
 ---
@@ -127,20 +142,28 @@ Cursor requires the instruction content to be lowered into MDC format. If the in
 
 ## Inheritance Example
 
-```yaml
-# Base instruction
+Base instruction (`base-standards.md`):
+
+```markdown
+---
 id: base-standards
 kind: instruction
-content: |
-  Always write tests.
+---
 
-# Derived instruction — adds to base content
+Always write tests.
+```
+
+Derived instruction (`go-standards.md`) — adds to base content:
+
+```markdown
+---
 id: go-standards
 kind: instruction
 extends:
   - base-standards
-content: |
-  Use table-driven tests with t.Run for all Go functions.
+---
+
+Use table-driven tests with t.Run for all Go functions.
 ```
 
 ---
@@ -149,10 +172,13 @@ content: |
 
 The simplest possible instruction:
 
-```yaml
+```markdown
+---
 id: always-test
 kind: instruction
-content: "Always write unit tests for every public function."
+---
+
+Always write unit tests for every public function.
 ```
 
 ---

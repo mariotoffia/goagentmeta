@@ -5,5 +5,3 @@ event: post-edit
 action:
   type: command
   ref: make lint
-content: |
-  Run linter after edits.

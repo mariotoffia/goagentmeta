@@ -1,7 +1,0 @@
-id: go-standards
-kind: instruction
-preservation: preferred
-scope:
-  fileTypes: [".go"]
-content: |
-  Use Go modules and table-driven tests.

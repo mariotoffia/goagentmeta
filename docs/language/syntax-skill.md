@@ -8,9 +8,10 @@ A skill is **model-facing content** (guidance, examples, templates) — distinct
 
 ## Canonical Form (`.ai/skills/`)
 
-The canonical YAML form is what you author in your `.ai/skills/` directory:
+The primary authoring format is a **Markdown file with YAML frontmatter**:
 
-```yaml
+```markdown
+---
 id: go-aws-lambda
 kind: skill
 description: Build and validate Go Lambda services with AWS SDK v2
@@ -24,26 +25,9 @@ labels:
   - go
   - lambda
   - aws
-
-content: |
-  ## Go Lambda Skill
-
-  Use Go 1.24+, context-first APIs, AWS SDK v2, and table-driven tests.
-
-  ### Lambda Handler Pattern
-
-  ```go
-  func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-      // always propagate context
-  }
-  ```
-
-  Use `lambda.Start(handler)` in `main()`. Never use `os.Exit`.
-
 requires:
   - terminal.exec
   - repo.search
-
 resources:
   references:
     - references/aws-lambda-patterns.md
@@ -52,36 +36,33 @@ resources:
     - assets/templates/lambda_main.go.tmpl
   scripts:
     - scripts/skills/go-aws-lambda/test.sh
-
-activation:
-  hints:
-    - lambda
-    - aws
-    - go
-
 allowedTools:
   - Read
   - Write
+  - Edit
+  - Glob
+  - Grep
   - "Bash(go:*)"
   - "Bash(golangci-lint:*)"
+  - "Bash(aws:*)"
+---
 
-userInvocable: true
-compatibility: "Designed for AI coding agents using Go projects on AWS."
+## Go Lambda Skill
 
-binaryDeps:
-  - go
-  - golangci-lint
+Use Go 1.24+, context-first APIs, AWS SDK v2, and table-driven tests.
 
-installSteps:
-  - kind: go
-    package: golang.org/x/tools/cmd/goimports@latest
-    bins: [goimports]
+### Lambda Handler Pattern
 
-publishing:
-  author: acme-team
-  homepage: https://github.com/acme/go-lambda-skill
-  emoji: "🚀"
+` ` `go
+func handler(ctx context.Context, event events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+    // always propagate context
+}
+` ` `
+
+Use `lambda.Start(handler)` in `main()`. Never use `os.Exit`.
 ```
+
+Save this as `.ai/skills/go-aws-lambda.md`. The frontmatter holds all structured metadata; the body becomes the skill content (the SKILL.md body).
 
 ---
 
@@ -100,22 +81,29 @@ See [ObjectMeta reference](README.md#common-envelope--objectmeta). Key fields fo
 | `scope` | Scope paths/fileTypes to restrict where the skill is active |
 | `preservation` | Usually `preferred` |
 
-### `content`
+### `content` (Markdown body)
 
-```yaml
-content: |
-  ## Skill Name
+The skill content is the **Markdown body after the closing `---`** of the frontmatter — it is not a YAML field. Everything below the frontmatter delimiter becomes the skill's guidance text:
 
-  Full markdown guidance for the AI. May include:
-  - Numbered steps
-  - Code examples
-  - Decision tables
-  - Anti-patterns to avoid
+```markdown
+---
+id: go-aws-lambda
+kind: skill
+description: Build and validate Go Lambda services with AWS SDK v2
+---
+
+## Go Lambda Skill
+
+Use Go 1.24+, context-first APIs, AWS SDK v2, and table-driven tests.
+
+- Always propagate `context.Context`
+- Use `lambda.Start(handler)` in `main()`
+- Write table-driven tests for every handler
 ```
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `content` | string | yes | The primary skill content. Full Markdown. This is the SKILL.md body in AgentSkills.io format. |
+| *(body)* | string | yes | The Markdown content after the closing `---`. This is the primary skill guidance seen by the AI. Maps to `Skill.Content` in the canonical model. |
 
 ### `requires`
 

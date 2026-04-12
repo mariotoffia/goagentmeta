@@ -1,6 +1,6 @@
 # Schema Sketches
 
-This document provides illustrative YAML schemas for the canonical object model defined in [overview.md](overview.md). The exact schema can evolve, but the architecture should converge on shapes like the following.
+This document provides illustrative schemas for the canonical object model defined in [overview.md](overview.md). Some types (manifest, hook, capability, plugin) are expressed as YAML; body-carrying types (skill, agent) use Markdown with YAML frontmatter. The exact schema can evolve, but the architecture should converge on shapes like the following.
 
 ---
 
@@ -75,9 +75,10 @@ compiler:
 
 ## 2. Skill
 
-### 2.1 Canonical Form (internal)
+### 2.1 Authoring Format (Markdown with YAML Frontmatter)
 
-```yaml
+```markdown
+---
 id: go-aws-lambda
 kind: skill
 description: Build and validate Go Lambda services with AWS SDK v2
@@ -87,15 +88,9 @@ scope:
   paths:
     - "services/**"
 preservation: preferred
-metadata:
-  name: go-aws-lambda
-content:
-  markdown: |
-    Use Go 1.24+, context-first APIs, AWS SDK v2, and table-driven tests.
 requires:
-  capabilities:
-    - terminal.exec
-    - repo.search
+  - terminal.exec
+  - repo.search
 resources:
   references:
     - references/aws-lambda-patterns.md
@@ -126,6 +121,9 @@ publishing:
   author: acme-team
   homepage: https://github.com/acme/go-lambda-skill
   emoji: "🚀"
+---
+
+Use Go 1.24+, context-first APIs, AWS SDK v2, and table-driven tests.
 ```
 
 ### 2.2 AgentSkills.io Frontmatter (import format)
@@ -177,23 +175,19 @@ allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*)
 
 ## 3. Agent
 
-```yaml
+```markdown
+---
 id: go-implementer
 kind: agent
+description: Go Implementer
 preservation: preferred
-metadata:
-  name: Go Implementer
-rolePrompt: |
-  Produce minimal, correct code changes with tests.
-links:
-  skills:
-    - go-aws-lambda
+skills:
+  - go-aws-lambda
 requires:
-  capabilities:
-    - filesystem.read
-    - filesystem.write
-    - terminal.exec
-    - repo.search
+  - filesystem.read
+  - filesystem.write
+  - terminal.exec
+  - repo.search
 toolPolicy:
   filesystem.write: allow
   terminal.exec: allow
@@ -206,6 +200,9 @@ handoffs:
     agent: security-reviewer
     prompt: Review the implementation above for security issues.
     autoSend: false
+---
+
+Produce minimal, correct code changes with tests.
 ```
 
 ---
@@ -231,7 +228,7 @@ inputs:
     - changedFiles
     - workingDirectory
 policy:
-  timeoutSeconds: 60
+  timeoutSeconds: 60       # YAML int → Go time.Duration (HookPolicy.Timeout)
 ```
 
 ---
@@ -259,9 +256,8 @@ security:
 id: repo-graph
 kind: plugin
 preservation: optional
-metadata:
-  name: Repo Graph
-  description: Provides repository graph queries as a runtime extension
+description: Provides repository graph queries as a runtime extension
+  # display name can go in description (e.g. "Repo Graph")
 distribution:
   mode: inline
 provides:
@@ -293,8 +289,7 @@ id: github-mcp
 kind: plugin
 preservation: preferred
 description: GitHub API access through MCP
-metadata:
-  name: GitHub MCP
+  # display name can go in description (e.g. "GitHub MCP")
 distribution:
   mode: external
   ref: "@modelcontextprotocol/server-github"
@@ -332,8 +327,7 @@ id: repo-graph
 kind: plugin
 preservation: optional
 description: Provides repository graph queries as a runtime extension
-metadata:
-  name: Repo Graph
+  # display name can go in description (e.g. "Repo Graph")
 distribution:
   mode: registry
   source: "registry.example.com/plugins/repo-graph"
@@ -348,4 +342,4 @@ security:
     network: none
 ```
 
-These examples are illustrative. The key architectural point is the separation of concerns, not the exact YAML spelling.
+These examples are illustrative. The key architectural point is the separation of concerns, not the exact syntax.

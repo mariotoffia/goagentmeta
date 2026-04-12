@@ -18,7 +18,7 @@ my-repo/
 └── .ai/
     ├── manifest.yaml
     └── instructions/
-        └── go-standards.yaml
+        └── go-standards.md
 ```
 
 ---
@@ -51,42 +51,43 @@ This tells the compiler to emit output for Claude Code and GitHub Copilot using 
 
 ## Step 2: Create the Instruction
 
-```yaml
-# .ai/instructions/go-standards.yaml
+<!-- .ai/instructions/go-standards.md -->
+
+```markdown
+---
 id: go-standards
 kind: instruction
 description: Core Go coding standards for this project
 preservation: preferred
-
 scope:
   fileTypes:
     - ".go"
+---
 
-content: |
-  ## Go Coding Standards
+## Go Coding Standards
 
-  ### Code Style
-  - Follow Effective Go and the Google Go Style Guide
-  - Maximum file length: 500 lines — split files when approaching the limit
-  - Use `gofmt` and `goimports` formatting (enforced by CI)
+### Code Style
+- Follow Effective Go and the Google Go Style Guide
+- Maximum file length: 500 lines — split files when approaching the limit
+- Use `gofmt` and `goimports` formatting (enforced by CI)
 
-  ### Error Handling
-  - Always check returned errors — never assign to `_` in production code
-  - Wrap with context: `fmt.Errorf("operation name: %w", err)`
-  - Use structured errors for domain-level failures
+### Error Handling
+- Always check returned errors — never assign to `_` in production code
+- Wrap with context: `fmt.Errorf("operation name: %w", err)`
+- Use structured errors for domain-level failures
 
-  ### Testing
-  - Table-driven tests with `t.Run` subtests for all exported functions
-  - Test file naming: `foo_test.go` in the same package
-  - Run `go test -race ./...` before every PR
+### Testing
+- Table-driven tests with `t.Run` subtests for all exported functions
+- Test file naming: `foo_test.go` in the same package
+- Run `go test -race ./...` before every PR
 
-  ### Context
-  - Pass `context.Context` as the first argument to all functions that do I/O
-  - Never store contexts in structs — pass them through call chains
+### Context
+- Pass `context.Context` as the first argument to all functions that do I/O
+- Never store contexts in structs — pass them through call chains
 
-  ### Packages
-  - Avoid `init()` functions except in test helpers
-  - Prefer small, focused packages over large monolithic ones
+### Packages
+- Avoid `init()` functions except in test helpers
+- Prefer small, focused packages over large monolithic ones
 ```
 
 ---
@@ -108,7 +109,7 @@ The AI assistant will read these files on every session and apply the standards 
 
 - **`scope.fileTypes: [".go"]`** — The instruction is only injected when the AI is working with `.go` files. For a global instruction (all files), omit the scope entirely.
 - **`preservation: preferred`** — If a target doesn't fully support scoped instructions, the compiler lowers gracefully and warns rather than failing.
-- **`content`** — Pure Markdown. Use headers, lists, and code blocks freely.
+- **Markdown body** — Everything after the frontmatter closing `---` is pure Markdown. Use headers, lists, and code blocks freely.
 
 ---
 
@@ -116,10 +117,13 @@ The AI assistant will read these files on every session and apply the standards 
 
 The absolute minimum instruction — no scope, just always-on content:
 
-```yaml
+```markdown
+---
 id: always-test
 kind: instruction
-content: "Always write unit tests for every public function."
+---
+
+Always write unit tests for every public function.
 ```
 
 ---

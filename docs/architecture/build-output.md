@@ -137,9 +137,9 @@ Recommended layout:
     local-dev/
 ```
 
-### 3.2 Build Unit Contents
+### 3.1 Build Unit Contents
 
-### 3.1 Hybrid Build Unit Contents
+### 3.2 Hybrid Build Unit Contents
 
 Each build unit emits two layers (see [compiler.md](compiler.md) Section 2.8).
 
@@ -157,7 +157,9 @@ claude/local-dev/
     go-implementer.md                # rendered agent
 
   # Extension layer — runtime configuration
-  settings.json                      # mcpServers, permissions
+  .mcp.json                          # mcpServers
+  .claude/
+    settings.json                    # hooks
 
   # Supporting artifacts
   assets/
@@ -218,7 +220,7 @@ Note: Cursor does not support skills, custom agents, hooks, or plugins natively.
 
 The instruction layer and extension layer are emitted together by default (hybrid mode). The manifest can disable either layer independently for specialized builds.
 
-### 3.2 Build Unit Contents
+### 3.3 Build Unit Contents
 
 - rendered files
 - materialized assets

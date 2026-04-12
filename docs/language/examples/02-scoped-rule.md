@@ -18,54 +18,54 @@ my-repo/
 └── .ai/
     ├── manifest.yaml
     └── rules/
-        └── go-secrets-policy.yaml
+        └── go-secrets-policy.md
 ```
 
 ---
 
 ## The Rule
 
-```yaml
-# .ai/rules/go-secrets-policy.yaml
+<!-- .ai/rules/go-secrets-policy.md -->
+
+```markdown
+---
 id: go-secrets-policy
 kind: rule
 description: Prevent credential exposure in security-sensitive Go services
-preservation: required            # Fail the build if this cannot be emitted
-
+preservation: required
 scope:
   paths:
     - "services/auth/**"
     - "services/payments/**"
   fileTypes:
     - ".go"
-
 conditions:
   - type: language
     value: go
   - type: path-pattern
     value: "services/{auth,payments}/**"
+---
 
-content: |
-  ## Security Policy: Credentials and Secrets
+## Security Policy: Credentials and Secrets
 
-  These rules apply to all Go code in the auth and payments services.
+These rules apply to all Go code in the auth and payments services.
 
-  ### Forbidden Patterns
-  - Never use `fmt.Println`, `log.Printf`, or any logger to print variables
-    that might contain tokens, passwords, API keys, or PII
-  - Never pass `*http.Request` bodies or form values to loggers
-  - Do not use `os.Getenv` for secrets — use the secrets manager client
+### Forbidden Patterns
+- Never use `fmt.Println`, `log.Printf`, or any logger to print variables
+  that might contain tokens, passwords, API keys, or PII
+- Never pass `*http.Request` bodies or form values to loggers
+- Do not use `os.Getenv` for secrets — use the secrets manager client
 
-  ### Required Patterns
-  - Use `crypto/rand` for all cryptographic randomness (never `math/rand`)
-  - Always validate JWT expiry and signature before trusting claims
-  - Use constant-time comparison (`subtle.ConstantTimeCompare`) for token equality
+### Required Patterns
+- Use `crypto/rand` for all cryptographic randomness (never `math/rand`)
+- Always validate JWT expiry and signature before trusting claims
+- Use constant-time comparison (`subtle.ConstantTimeCompare`) for token equality
 
-  ### Code Review Checklist
-  Before completing any change, verify:
-  1. No secrets appear in log output
-  2. All external inputs are validated before use
-  3. Errors do not leak internal state to external callers
+### Code Review Checklist
+Before completing any change, verify:
+1. No secrets appear in log output
+2. All external inputs are validated before use
+3. Errors do not leak internal state to external callers
 ```
 
 ---

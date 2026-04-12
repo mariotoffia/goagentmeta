@@ -77,3 +77,28 @@ func AllPhases() []Phase {
 
 // PhaseCount is the total number of pipeline phases.
 const PhaseCount = 10
+
+// phaseNames maps phase string names to Phase values.
+var phaseNames = func() map[string]Phase {
+	m := make(map[string]Phase, PhaseCount)
+	for _, p := range AllPhases() {
+		m[p.String()] = p
+	}
+	return m
+}()
+
+// ParsePhase converts a phase name string to a Phase value.
+// It returns the phase and true if the name is valid, or zero and false otherwise.
+func ParsePhase(name string) (Phase, bool) {
+	p, ok := phaseNames[name]
+	return p, ok
+}
+
+// ValidPhaseNames returns a sorted slice of all valid phase name strings.
+func ValidPhaseNames() []string {
+	names := make([]string, 0, PhaseCount)
+	for _, p := range AllPhases() {
+		names = append(names, p.String())
+	}
+	return names
+}

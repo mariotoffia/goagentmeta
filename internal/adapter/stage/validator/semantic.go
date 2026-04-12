@@ -5,16 +5,28 @@ import (
 
 	"github.com/mariotoffia/goagentmeta/internal/domain/model"
 	"github.com/mariotoffia/goagentmeta/internal/domain/pipeline"
+	"github.com/mariotoffia/goagentmeta/internal/domain/tool"
 )
 
 // SemanticValidator performs cross-object relationship validation on a
 // SourceTree. It detects duplicate IDs, broken references, circular
-// inheritance, and circular delegation.
-type SemanticValidator struct{}
+// inheritance, and circular delegation. It also validates tool expressions
+// when a ToolPluginRegistry is configured.
+type SemanticValidator struct {
+	// toolRegistry validates tool expressions in allowedTools and toolPolicy.
+	// May be nil, in which case tool validation is skipped.
+	toolRegistry *tool.Registry
+}
 
 // NewSemanticValidator returns a new semantic validator.
 func NewSemanticValidator() *SemanticValidator {
 	return &SemanticValidator{}
+}
+
+// WithToolRegistry sets the tool plugin registry for tool expression validation.
+func (v *SemanticValidator) WithToolRegistry(r *tool.Registry) *SemanticValidator {
+	v.toolRegistry = r
+	return v
 }
 
 // Validate checks cross-object semantic constraints and returns diagnostics.
@@ -27,6 +39,7 @@ func (v *SemanticValidator) Validate(tree pipeline.SourceTree) []pipeline.Diagno
 	diags = append(diags, v.checkReferences(tree, objectsByID)...)
 	diags = append(diags, v.checkCircularInheritance(tree, objectsByID)...)
 	diags = append(diags, v.checkCircularDelegation(tree, objectsByID)...)
+	diags = append(diags, v.checkToolExpressions(tree)...)
 
 	return diags
 }
@@ -369,4 +382,214 @@ func (v *SemanticValidator) extractHandoffAgentRefs(fields map[string]any) []str
 		}
 	}
 	return refs
+}
+
+// checkToolExpressions validates tool expressions in allowedTools (skills)
+// and toolPolicy keys (agents) against the registered tool plugins.
+func (v *SemanticValidator) checkToolExpressions(tree pipeline.SourceTree) []pipeline.Diagnostic {
+	if v.toolRegistry == nil {
+		return nil
+	}
+
+	var diags []pipeline.Diagnostic
+	for _, obj := range tree.Objects {
+		switch obj.Meta.Kind {
+		case model.KindSkill:
+			diags = append(diags, v.validateAllowedTools(obj)...)
+			diags = append(diags, v.validateBashBinaryDeps(obj)...)
+		case model.KindAgent:
+			diags = append(diags, v.validateToolPolicy(obj)...)
+		}
+	}
+	return diags
+}
+
+// validateAllowedTools checks the allowedTools field of a skill.
+func (v *SemanticValidator) validateAllowedTools(obj pipeline.RawObject) []pipeline.Diagnostic {
+	tools, ok := obj.RawFields["allowedTools"]
+	if !ok {
+		return nil
+	}
+	arr, ok := tools.([]any)
+	if !ok {
+		return nil
+	}
+
+	var diags []pipeline.Diagnostic
+	for _, item := range arr {
+		expr, ok := item.(string)
+		if !ok {
+			continue
+		}
+		if err := v.toolRegistry.ValidateExpression(expr); err != nil {
+			severity := "warning"
+			if _, isUnknown := err.(*tool.UnknownToolError); !isUnknown {
+				severity = "error" // syntax errors are errors; unknown tools are warnings
+			}
+			diags = append(diags, pipeline.Diagnostic{
+				Severity:   severity,
+				Code:       string(pipeline.ErrValidation),
+				Message:    fmt.Sprintf("allowedTools: tool expression %q: %v", expr, err),
+				SourcePath: obj.SourcePath,
+				ObjectID:   obj.Meta.ID,
+				Phase:      pipeline.PhaseValidate,
+			})
+		}
+	}
+	return diags
+}
+
+// validateBashBinaryDeps cross-validates Bash(<command>:*) entries in
+// allowedTools against the binaryDeps list. If a skill declares
+// Bash(go:*) but "go" is not in binaryDeps, emit a warning.
+func (v *SemanticValidator) validateBashBinaryDeps(obj pipeline.RawObject) []pipeline.Diagnostic {
+	tools, ok := obj.RawFields["allowedTools"]
+	if !ok {
+		return nil
+	}
+	arr, ok := tools.([]any)
+	if !ok {
+		return nil
+	}
+
+	// Collect Bash command names from allowedTools.
+	var bashCmds []string
+	for _, item := range arr {
+		expr, ok := item.(string)
+		if !ok {
+			continue
+		}
+		parsed := tool.ParseExpression(expr)
+		if parsed.Keyword != "Bash" || parsed.Args == "" {
+			continue
+		}
+		parts := splitBashArgs(parsed.Args)
+		if parts[0] != "" {
+			bashCmds = append(bashCmds, parts[0])
+		}
+	}
+
+	if len(bashCmds) == 0 {
+		return nil
+	}
+
+	// Collect binaryDeps set.
+	binDeps := extractStringSlice(obj.RawFields, "binaryDeps")
+	binSet := make(map[string]bool, len(binDeps))
+	for _, b := range binDeps {
+		binSet[b] = true
+	}
+
+	// If binaryDeps is declared, check that Bash commands are listed.
+	if len(binDeps) == 0 {
+		return nil // no binaryDeps declared — skip cross-validation
+	}
+
+	var diags []pipeline.Diagnostic
+	for _, cmd := range bashCmds {
+		if !binSet[cmd] {
+			diags = append(diags, pipeline.Diagnostic{
+				Severity:   "warning",
+				Code:       string(pipeline.ErrValidation),
+				Message:    fmt.Sprintf("allowedTools includes Bash(%s:*) but %q is not listed in binaryDeps", cmd, cmd),
+				SourcePath: obj.SourcePath,
+				ObjectID:   obj.Meta.ID,
+				Phase:      pipeline.PhaseValidate,
+			})
+		}
+	}
+	return diags
+}
+
+// splitBashArgs splits Bash args on ":" returning [command, glob].
+func splitBashArgs(args string) [2]string {
+	idx := indexByte(args, ':')
+	if idx < 0 {
+		return [2]string{args, ""}
+	}
+	return [2]string{args[:idx], args[idx+1:]}
+}
+
+func indexByte(s string, c byte) int {
+	for i := 0; i < len(s); i++ {
+		if s[i] == c {
+			return i
+		}
+	}
+	return -1
+}
+
+// extractStringSlice extracts a string slice from a raw fields map.
+func extractStringSlice(fields map[string]any, key string) []string {
+	val, ok := fields[key]
+	if !ok {
+		return nil
+	}
+	arr, ok := val.([]any)
+	if !ok {
+		return nil
+	}
+	result := make([]string, 0, len(arr))
+	for _, item := range arr {
+		if s, ok := item.(string); ok {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+// validateToolPolicy checks the toolPolicy keys of an agent.
+func (v *SemanticValidator) validateToolPolicy(obj pipeline.RawObject) []pipeline.Diagnostic {
+	policy, ok := obj.RawFields["toolPolicy"]
+	if !ok {
+		return nil
+	}
+	policyMap, ok := policy.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	var diags []pipeline.Diagnostic
+	for key, val := range policyMap {
+		// Validate the tool/capability key.
+		if err := v.toolRegistry.ValidateExpression(key); err != nil {
+			// Unknown tool that isn't a capability ID is worth warning about.
+			diags = append(diags, pipeline.Diagnostic{
+				Severity:   "warning",
+				Code:       string(pipeline.ErrValidation),
+				Message:    fmt.Sprintf("toolPolicy: key %q: %v", key, err),
+				SourcePath: obj.SourcePath,
+				ObjectID:   obj.Meta.ID,
+				Phase:      pipeline.PhaseValidate,
+			})
+		}
+
+		// Validate the decision value.
+		decision, ok := val.(string)
+		if !ok {
+			diags = append(diags, pipeline.Diagnostic{
+				Severity:   "error",
+				Code:       string(pipeline.ErrValidation),
+				Message:    fmt.Sprintf("toolPolicy: value for %q must be a string", key),
+				SourcePath: obj.SourcePath,
+				ObjectID:   obj.Meta.ID,
+				Phase:      pipeline.PhaseValidate,
+			})
+			continue
+		}
+		switch decision {
+		case "allow", "deny", "ask":
+			// valid
+		default:
+			diags = append(diags, pipeline.Diagnostic{
+				Severity:   "error",
+				Code:       string(pipeline.ErrValidation),
+				Message:    fmt.Sprintf("toolPolicy: invalid decision %q for %q (must be allow, deny, or ask)", decision, key),
+				SourcePath: obj.SourcePath,
+				ObjectID:   obj.Meta.ID,
+				Phase:      pipeline.PhaseValidate,
+			})
+		}
+	}
+	return diags
 }

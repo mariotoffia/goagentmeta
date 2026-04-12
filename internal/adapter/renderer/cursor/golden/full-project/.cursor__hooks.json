@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "beforeMCPExecution": [
+      {
+        "type": "command",
+        "command": "check-auth"
+      }
+    ]
+  }
+}

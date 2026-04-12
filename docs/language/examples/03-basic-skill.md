@@ -1,14 +1,14 @@
 # Example 03: Basic Skill
 
 **Level**: 🟢 Beginner  
-**Goal**: Author a reusable skill for Go AWS Lambda development in two formats: canonical `.ai/` YAML and AgentSkills.io SKILL.md.
+**Goal**: Author a reusable skill for Go AWS Lambda development. Also shows the AgentSkills.io SKILL.md import format.
 
 ---
 
 ## What You'll Build
 
 A skill named `go-aws-lambda` that the AI can invoke to guide Lambda development. You'll see:
-- The canonical YAML form for your `.ai/skills/` directory
+- The canonical Markdown-with-frontmatter form for your `.ai/skills/` directory
 - The AgentSkills.io SKILL.md form (used when importing community skills)
 - How activation hints, allowed tools, and resources work
 
@@ -21,17 +21,18 @@ my-repo/
 └── .ai/
     ├── manifest.yaml
     ├── skills/
-    │   └── go-aws-lambda.yaml
+    │   └── go-aws-lambda.md
     └── references/
         └── aws-lambda-patterns.md
 ```
 
 ---
 
-## Option A: Canonical YAML Form
+## Canonical Form
 
-```yaml
-# .ai/skills/go-aws-lambda.yaml
+```markdown
+<!-- .ai/skills/go-aws-lambda.md -->
+---
 id: go-aws-lambda
 kind: skill
 description: Build, test, and deploy Go Lambda functions with AWS SDK v2
@@ -45,55 +46,18 @@ labels:
   - go
   - aws
   - lambda
-
-content: |
-  ## Go AWS Lambda Skill
-
-  ### Handler Pattern
-
-  Always use the context-first handler signature:
-
-  ```go
-  func handler(ctx context.Context, event events.APIGatewayProxyRequest) (
-      events.APIGatewayProxyResponse, error,
-  ) {
-      // propagate context to all downstream calls
-  }
-
-  func main() {
-      lambda.Start(handler)
-  }
-  ```
-
-  ### Key Rules
-  - Use `github.com/aws/aws-lambda-go/lambda` and `events` packages
-  - Use AWS SDK v2: `github.com/aws/aws-sdk-go-v2`
-  - Load config with `config.LoadDefaultConfig(ctx)` — never hardcode region
-  - Return `(events.APIGatewayProxyResponse, error)` — never call `os.Exit`
-  - Wrap SDK errors: `fmt.Errorf("dynamodb.GetItem: %w", err)`
-
-  ### Testing
-  - Unit-test the handler with table-driven tests
-  - Use `aws.String`, `aws.Int64` helpers for pointer values
-  - Mock AWS clients with interfaces — never call real AWS in unit tests
-
-  For in-depth patterns, consult `references/aws-lambda-patterns.md`.
-
 requires:
   - terminal.exec
   - filesystem.read
-
 resources:
   references:
     - references/aws-lambda-patterns.md
-
 activation:
   hints:
     - lambda
     - aws
     - serverless
     - api-gateway
-
 allowedTools:
   - Read
   - Write
@@ -103,23 +67,53 @@ allowedTools:
   - "Bash(go:*)"
   - "Bash(golangci-lint:*)"
   - "Bash(aws:*)"
-
 userInvocable: true
 compatibility: "Designed for Go projects deployed on AWS Lambda."
-
 binaryDeps:
   - go
   - golangci-lint
-
 installSteps:
   - kind: go
     package: golang.org/x/tools/cmd/goimports@latest
     bins: [goimports]
+---
+
+## Go AWS Lambda Skill
+
+### Handler Pattern
+
+Always use the context-first handler signature:
+
+```go
+func handler(ctx context.Context, event events.APIGatewayProxyRequest) (
+    events.APIGatewayProxyResponse, error,
+) {
+    // propagate context to all downstream calls
+}
+
+func main() {
+    lambda.Start(handler)
+}
+```
+
+### Key Rules
+- Use `github.com/aws/aws-lambda-go/lambda` and `events` packages
+- Use AWS SDK v2: `github.com/aws/aws-sdk-go-v2`
+- Load config with `config.LoadDefaultConfig(ctx)` — never hardcode region
+- Return `(events.APIGatewayProxyResponse, error)` — never call `os.Exit`
+- Wrap SDK errors: `fmt.Errorf("dynamodb.GetItem: %w", err)`
+
+### Testing
+- Unit-test the handler with table-driven tests
+- Use `aws.String`, `aws.Int64` helpers for pointer values
+- Mock AWS clients with interfaces — never call real AWS in unit tests
+
+For in-depth patterns, consult `references/aws-lambda-patterns.md`.
 ```
 
 ---
 
-## Option B: AgentSkills.io SKILL.md Form
+## AgentSkills.io SKILL.md Import Format
 
 Place this file in `.agents/skills/go-aws-lambda/SKILL.md` to use the community import format:
 

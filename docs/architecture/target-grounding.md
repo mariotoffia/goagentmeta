@@ -9,7 +9,7 @@ This document maps the canonical object model from [overview.md](overview.md) to
 | Platform | Instruction File | Rules Mechanism | Skills | Agents | Hooks | Plugins | MCP Config | Prompt Files |
 |---|---|---|---|---|---|---|---|---|
 | **Claude Code** | `CLAUDE.md` (hierarchical) | `.claude/rules/*.md` (`paths:` frontmatter) | `.claude/skills/` (SKILL.md) | `.claude/agents/*.md` | 24+ events, 4 types | `.claude-plugin/` (marketplace) | `.mcp.json` (`mcpServers`) | — (skills serve this role) |
-| **Cursor** | `AGENTS.md` (root + subdirs) | `.cursor/rules/*.md\|.mdc` (globs, alwaysApply, description) | Via plugins (adapted) | Custom modes + plugin subagents (adapted) | Native (beforeMCPExecution, shell hooks) | Cursor Marketplace (native) | `.cursor/mcp.json` (`mcpServers`) | — |
+| **Cursor** | `AGENTS.md` (root + subdirs) | `.cursor/rules/*.md\|.mdc` (globs, alwaysApply, description) | Via plugins (adapted) | Custom modes + plugin subagents (adapted) | Adapted (beforeMCPExecution, afterMCPExecution, preShellCommand only) | Cursor Marketplace (native) | `.cursor/mcp.json` (`mcpServers`) | — |
 | **Copilot (VS Code)** | `.github/copilot-instructions.md` + `AGENTS.md` | `.github/instructions/*.instructions.md` (`applyTo:` globs) | `.github/skills/` (SKILL.md) | `.github/agents/*.agent.md` | 8 events, command type | agent plugins (marketplace) | `.vscode/mcp.json` (`servers`) | `.github/prompts/*.prompt.md` |
 | **Codex CLI** | `AGENTS.md` (root + subdirs) | Rules | `.codex/skills/` (SKILL.md) | Custom agents | Hooks (supported) | Plugins (marketplace) | MCP (supported) | — |
 
@@ -192,7 +192,7 @@ The canonical model should represent handoffs as an optional agent property that
 
 ### 6.4 Renderer Implications
 
-- **Cursor**: hooks are now natively supported. The renderer should emit hooks configuration for supported Cursor events (beforeMCPExecution, afterMCPExecution, preShellCommand). Events not supported by Cursor should be lowered or skipped
+- **Cursor**: hooks are partially supported (adapted). Only `beforeMCPExecution`, `afterMCPExecution`, and `preShellCommand` have native hook points. Generic lifecycle events (SessionStart, SessionEnd, Stop, etc.) have no Cursor equivalent and must be skipped
 - **Copilot reads Claude hook format**: renderers may emit Claude-format hooks and Copilot will consume them. However, matcher values are ignored by Copilot (hooks run on all matching events)
 - **Hook type lowering**: `http`, `prompt`, and `agent` hook types (Claude-only) must be lowered to `command` or skipped for other targets
 
@@ -334,8 +334,8 @@ targets:
       toolPolicies: adapted          # custom modes support tool restrictions
       handoffs: skipped
     hooks:
-      lifecycle: native              # beforeMCPExecution, afterMCPExecution, preShellCommand
-      blockingValidation: native     # hooks can block agent actions
+      lifecycle: adapted             # only beforeMCPExecution, afterMCPExecution, preShellCommand — no generic lifecycle events
+      blockingValidation: adapted    # hooks can block agent actions for supported events only
     commands:
       explicitEntryPoints: skipped   # no native equivalent
     plugins:

@@ -1,7 +1,7 @@
 # Example 07: Authoring AGENT.md
 
 **Level**: 🟡 Intermediate  
-**Goal**: Understand how AGENT.md files work, how to author them manually, and how goagentmeta generates them automatically from agent YAML definitions.
+**Goal**: Understand how AGENT.md files work, how to author them manually, and how goagentmeta generates them automatically from agent definitions.
 
 ---
 
@@ -12,7 +12,7 @@ There are two related but distinct concepts:
 | Concept | What it is | How it's created |
 |---|---|---|
 | **AGENT.md (repo instructions)** | A Markdown file at the repo root that AI assistants (Codex, Claude Code) read as always-on instructions | Written manually or generated from `instruction` entities |
-| **Agent YAML entity** | A `.ai/agents/*.yaml` definition of a specialized AI agent role | Written in `.ai/agents/`, compiled to target-native output |
+| **Agent YAML entity** | A `.ai/agents/*.md` definition (Markdown with YAML frontmatter) of a specialized AI agent role | Authored as `.md` with YAML frontmatter in `.ai/agents/`, compiled to target-native output |
 
 This example covers both. The goagentmeta project's own [`AGENT.md`](../../../AGENT.md) is an example of the first kind.
 
@@ -97,34 +97,36 @@ make check         # build + lint + test
 
 Instead of (or in addition to) writing AGENT.md manually, you can use `instruction` entities that the compiler compiles to `AGENTS.md` (Codex) and `CLAUDE.md` (Claude Code).
 
-```yaml
-# .ai/instructions/project-overview.yaml
+<!-- .ai/instructions/project-overview.md -->
+
+```markdown
+---
 id: project-overview
 kind: instruction
 description: Project overview and architecture principles
 preservation: required
+---
 
-content: |
-  # My Service — Agent Guidelines
+# My Service — Agent Guidelines
 
-  A Go microservice for processing payment transactions.
+A Go microservice for processing payment transactions.
 
-  ## Architecture
-  - Hexagonal architecture: domain → application → port → adapter
-  - Go 1.25+, AWS SDK v2, DynamoDB
+## Architecture
+- Hexagonal architecture: domain → application → port → adapter
+- Go 1.25+, AWS SDK v2, DynamoDB
 
-  ## Build Commands
+## Build Commands
 
-  ```bash
-  make build   # Build
-  make test    # Test (with race detection)
-  make lint    # Lint
-  ```
+```bash
+make build   # Build
+make test    # Test (with race detection)
+make lint    # Lint
+```
 
-  ## Standards
-  - Table-driven tests for all exported functions
-  - Wrap errors: `fmt.Errorf("context: %w", err)`
-  - No `init()` functions in production code
+## Standards
+- Table-driven tests for all exported functions
+- Wrap errors: `fmt.Errorf("context: %w", err)`
+- No `init()` functions in production code
 ```
 
 When compiled for `codex` target, this instruction is emitted as `AGENTS.md`. For `claude`, it becomes `CLAUDE.md`.
@@ -133,7 +135,7 @@ When compiled for `codex` target, this instruction is emitted as `AGENTS.md`. Fo
 
 ## Part 3: AGENT.md + Agent YAML Together
 
-The `AGENT.md` provides always-on context for the AI. The agent YAML entities define **specialized roles** within that context.
+The `AGENT.md` provides always-on context for the AI. The agent entities define **specialized roles** within that context.
 
 ```mermaid
 flowchart TD
@@ -142,8 +144,8 @@ flowchart TD
     AGENTMD -.->|equivalent output| OUT1["AGENTS.md / CLAUDE.md"]
     INST -->|compiled to| OUT1
 
-    AGENTYAML["agent entities\n(.ai/agents/)"]
-    AGENTYAML -->|compiled to| OUT2["Target-native agent configs\n(Copilot agents, Claude subagents, etc.)"]
+    AGENTENT["agent entities\n(.ai/agents/*.md)"]
+    AGENTENT -->|compiled to| OUT2["Target-native agent configs\n(Copilot agents, Claude subagents, etc.)"]
 
     OUT1 & OUT2 -->|read by| AI[AI Assistant]
 ```
@@ -188,4 +190,4 @@ Aim for 200–500 lines. The goagentmeta project's own AGENT.md is a good refere
 
 - [08-plugin-mcp.md](08-plugin-mcp.md) — Add an MCP plugin for GitHub API access
 - [../syntax-instruction.md](../syntax-instruction.md) — Instruction syntax (for generating AGENT.md)
-- [../syntax-agent.md](../syntax-agent.md) — Agent YAML entity syntax
+- [../syntax-agent.md](../syntax-agent.md) — Agent entity syntax

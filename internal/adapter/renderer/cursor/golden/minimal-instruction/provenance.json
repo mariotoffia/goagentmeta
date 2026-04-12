@@ -1,0 +1,12 @@
+{
+  "buildUnit": ".ai-build/cursor/local-dev",
+  "target": "cursor",
+  "entries": [
+    {
+      "sourceObject": "arch-inst",
+      "outputFiles": [
+        "AGENTS.md"
+      ]
+    }
+  ]
+}

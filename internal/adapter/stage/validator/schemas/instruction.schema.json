@@ -1,0 +1,12 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "instruction",
+  "description": "Schema for instruction objects — always-on guidance and context",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Markdown instruction text injected into AI context"
+    }
+  },
+  "required": []
+}

@@ -1,0 +1,78 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "skill",
+  "description": "Schema for skill objects — reusable workflow bundle",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Primary markdown skill content"
+    },
+    "requires": {
+      "type": "object",
+      "description": "Capability requirements",
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "description": "Supporting files",
+      "properties": {
+        "references": { "type": "array", "items": { "type": "string" } },
+        "assets": { "type": "array", "items": { "type": "string" } },
+        "scripts": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "description": "Activation configuration",
+      "properties": {
+        "hints": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "allowedTools": {
+      "type": "array",
+      "description": "Tool permission expressions",
+      "items": { "type": "string" }
+    },
+    "compatibility": {
+      "type": "string",
+      "description": "Platform compatibility statement"
+    },
+    "binaryDeps": {
+      "type": "array",
+      "description": "Required external binaries",
+      "items": { "type": "string" }
+    },
+    "installSteps": {
+      "type": "array",
+      "description": "Installation directives",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string" },
+          "package": { "type": "string" },
+          "bins": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["kind", "package"]
+      }
+    },
+    "publishing": {
+      "type": "object",
+      "description": "Publishing metadata",
+      "properties": {
+        "author": { "type": "string" },
+        "homepage": { "type": "string" },
+        "emoji": { "type": "string" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Skill metadata block"
+    }
+  },
+  "required": []
+}

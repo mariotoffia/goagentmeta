@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "post-edit": [
+      {
+        "type": "command",
+        "command": "make lint"
+      }
+    ]
+  }
+}

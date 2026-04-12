@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"github.com/mariotoffia/goagentmeta/internal/domain/build"
 	"github.com/mariotoffia/goagentmeta/internal/port/filesystem"
 	"github.com/mariotoffia/goagentmeta/internal/port/reporter"
 	"github.com/mariotoffia/goagentmeta/internal/port/stage"
@@ -35,6 +36,14 @@ type PipelineConfig struct {
 	// FailFast stops the pipeline on the first stage error.
 	// When false, the pipeline accumulates diagnostics and continues.
 	FailFast bool
+
+	// Profile is the build profile that controls trust policies and
+	// security-sensitive behavior (e.g., enterprise-locked blocks external registries).
+	Profile build.Profile
+
+	// Targets lists the targets to build for. When empty, all known targets
+	// are compiled (equivalent to build.AllTargets()).
+	Targets []build.Target
 }
 
 // Option configures a Pipeline during construction.
@@ -105,4 +114,15 @@ func WithMaterializer(m filesystem.Materializer) Option {
 // WithFailFast sets fail-fast mode (default: true).
 func WithFailFast(ff bool) Option {
 	return func(c *PipelineConfig) { c.FailFast = ff }
+}
+
+// WithProfile sets the build profile for trust policy enforcement.
+func WithProfile(p build.Profile) Option {
+	return func(c *PipelineConfig) { c.Profile = p }
+}
+
+// WithTargets sets the targets to compile for. When empty, all known targets
+// are compiled (equivalent to build.AllTargets()).
+func WithTargets(targets ...build.Target) Option {
+	return func(c *PipelineConfig) { c.Targets = targets }
 }

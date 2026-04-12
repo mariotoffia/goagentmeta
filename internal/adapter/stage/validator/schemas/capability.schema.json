@@ -1,0 +1,31 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "capability",
+  "description": "Schema for capability objects — abstract contracts",
+  "properties": {
+    "contract": {
+      "type": "object",
+      "description": "Capability contract details",
+      "properties": {
+        "category": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["category"]
+    },
+    "security": {
+      "type": "object",
+      "description": "Permission requirements",
+      "properties": {
+        "network": {
+          "type": "string",
+          "enum": ["none", "outbound", "inbound"]
+        },
+        "filesystem": {
+          "type": "string",
+          "enum": ["none", "read-repo", "read-write"]
+        }
+      }
+    }
+  },
+  "required": ["contract"]
+}

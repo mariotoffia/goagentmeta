@@ -1,0 +1,16 @@
+target: cursor
+surfaces:
+  instructions.layeredFiles: adapted    # AGENTS.md (not native instruction format)
+  instructions.scopedSections: native   # subdirectory AGENTS.md
+  rules.scopedRules: native             # .cursor/rules/*.mdc with globs
+  skills.bundles: adapted               # via Cursor Marketplace plugins
+  skills.supportingFiles: adapted       # via plugin-bundled skills
+  agents.subagents: adapted             # custom modes + plugin subagents
+  agents.toolPolicies: adapted          # custom modes support tool restrictions
+  agents.handoffs: skipped              # no handoff support
+  hooks.lifecycle: native               # beforeMCPExecution, afterMCPExecution, shell hooks
+  hooks.blockingValidation: native      # hooks can block agent actions
+  commands.explicitEntryPoints: skipped # no native equivalent
+  plugins.installablePackages: native   # Cursor Marketplace (100s of plugins)
+  plugins.capabilityProviders: native   # plugins provide MCPs, skills, subagents
+  mcp.serverBindings: native            # .cursor/mcp.json mcpServers key

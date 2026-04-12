@@ -17,6 +17,22 @@ type CompilerContext struct {
 	Report *pipeline.BuildReport
 }
 
+// compilerContextKey is the context key for CompilerContext.
+type compilerContextKey struct{}
+
+// ContextWithCompiler returns a context carrying the given CompilerContext.
+// Pipeline stages can retrieve it with CompilerFromContext.
+func ContextWithCompiler(ctx context.Context, cc *CompilerContext) context.Context {
+	return context.WithValue(ctx, compilerContextKey{}, cc)
+}
+
+// CompilerFromContext extracts the CompilerContext from the context.
+// Returns nil if not present.
+func CompilerFromContext(ctx context.Context) *CompilerContext {
+	cc, _ := ctx.Value(compilerContextKey{}).(*CompilerContext)
+	return cc
+}
+
 // Pipeline orchestrates the multi-phase compiler pipeline. It loads stages
 // from the registry, orders them by phase and priority, dispatches IR between
 // stages, calls hooks, and accumulates diagnostics into a final BuildReport.
@@ -77,6 +93,9 @@ func (p *Pipeline) executePhase(
 	phase pipeline.Phase,
 	input any,
 ) (any, error) {
+	// Inject CompilerContext into the context for stages to access.
+	ctx = ContextWithCompiler(ctx, cc)
+
 	// Run before-phase hooks.
 	if err := p.runHooks(ctx, phase, pipeline.HookBeforePhase, &input); err != nil {
 		return nil, fmt.Errorf("before-phase hook: %w", err)

@@ -1,0 +1,48 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "manifest",
+  "description": "Schema for manifest.yaml — project configuration",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "description": "Schema version"
+    },
+    "project": {
+      "type": "object",
+      "description": "Project metadata"
+    },
+    "build": {
+      "type": "object",
+      "description": "Build configuration"
+    },
+    "compilation": {
+      "type": "object",
+      "description": "Compilation settings"
+    },
+    "preservation": {
+      "type": "object",
+      "description": "Preservation defaults"
+    },
+    "targets": {
+      "type": "object",
+      "description": "Target configuration"
+    },
+    "profiles": {
+      "type": "object",
+      "description": "Profile configuration"
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Package dependencies"
+    },
+    "registries": {
+      "type": "array",
+      "description": "Registry configuration"
+    },
+    "compiler": {
+      "type": "object",
+      "description": "Compiler plugin configuration"
+    }
+  },
+  "required": []
+}

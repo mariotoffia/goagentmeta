@@ -1,0 +1,12 @@
+{
+  "buildUnit": ".ai-build/codex/local-dev",
+  "target": "codex",
+  "entries": [
+    {
+      "sourceObject": "arch-inst",
+      "outputFiles": [
+        "AGENTS.md"
+      ]
+    }
+  ]
+}

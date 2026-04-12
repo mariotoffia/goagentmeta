@@ -1,0 +1,68 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "plugin",
+  "description": "Schema for plugin objects — deployable extension packages",
+  "properties": {
+    "distribution": {
+      "type": "object",
+      "description": "Distribution configuration",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["inline", "external", "registry"]
+        },
+        "ref": { "type": "string" },
+        "source": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "required": ["mode"]
+    },
+    "provides": {
+      "type": "object",
+      "description": "Capabilities provided",
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "Trust and permission requirements",
+      "properties": {
+        "trust": {
+          "type": "string",
+          "enum": ["trusted", "review-required", "verified-publisher", "untrusted"]
+        },
+        "permissions": {
+          "type": "object",
+          "properties": {
+            "filesystem": { "type": "string" },
+            "network": { "type": "string" },
+            "processExec": { "type": "boolean" },
+            "secrets": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "description": "Selection mode configuration"
+    },
+    "install": {
+      "type": "object",
+      "description": "Installation strategy"
+    },
+    "artifacts": {
+      "type": "object",
+      "description": "Plugin file artifacts",
+      "properties": {
+        "scripts": { "type": "array", "items": { "type": "string" } },
+        "configs": { "type": "array", "items": { "type": "string" } },
+        "manifests": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "required": ["distribution"]
+}

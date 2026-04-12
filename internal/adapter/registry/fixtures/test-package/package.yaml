@@ -1,0 +1,4 @@
+name: test-package
+version: 1.0.0
+publisher: test-publisher
+description: A test package for registry adapter tests

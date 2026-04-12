@@ -1,0 +1,48 @@
+{
+  "buildUnit": ".ai-build/claude/local-dev",
+  "target": "claude",
+  "entries": [
+    {
+      "sourceObject": "api-instruction",
+      "outputFiles": [
+        "services/api/CLAUDE.md"
+      ]
+    },
+    {
+      "sourceObject": "arch-instruction",
+      "outputFiles": [
+        "CLAUDE.md"
+      ]
+    },
+    {
+      "sourceObject": "github-plugin",
+      "outputFiles": [
+        ".mcp.json"
+      ]
+    },
+    {
+      "sourceObject": "go-rule",
+      "outputFiles": [
+        ".claude/rules/go-rule.md"
+      ]
+    },
+    {
+      "sourceObject": "iam-skill",
+      "outputFiles": [
+        ".claude/skills/iam-skill/SKILL.md"
+      ]
+    },
+    {
+      "sourceObject": "lint-hook",
+      "outputFiles": [
+        ".claude/settings.json"
+      ]
+    },
+    {
+      "sourceObject": "review-agent",
+      "outputFiles": [
+        ".claude/agents/review-agent.md"
+      ]
+    }
+  ]
+}

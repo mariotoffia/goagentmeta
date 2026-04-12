@@ -1,0 +1,48 @@
+{
+  "buildUnit": ".ai-build/codex/local-dev",
+  "target": "codex",
+  "entries": [
+    {
+      "sourceObject": "api-instruction",
+      "outputFiles": [
+        "services/api/AGENTS.md"
+      ]
+    },
+    {
+      "sourceObject": "arch-instruction",
+      "outputFiles": [
+        "AGENTS.md"
+      ]
+    },
+    {
+      "sourceObject": "github-plugin",
+      "outputFiles": [
+        ".mcp.json"
+      ]
+    },
+    {
+      "sourceObject": "go-rule",
+      "outputFiles": [
+        ".codex/rules/go-rule.md"
+      ]
+    },
+    {
+      "sourceObject": "iam-skill",
+      "outputFiles": [
+        ".codex/skills/iam-skill/SKILL.md"
+      ]
+    },
+    {
+      "sourceObject": "review-agent",
+      "outputFiles": [
+        ".codex/agents/review-agent.md"
+      ]
+    },
+    {
+      "sourceObject": "start-hook",
+      "outputFiles": [
+        ".codex/settings.json"
+      ]
+    }
+  ]
+}

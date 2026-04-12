@@ -1,0 +1,12 @@
+{
+  "buildUnit": ".ai-build/claude/local-dev",
+  "target": "claude",
+  "entries": [
+    {
+      "sourceObject": "arch-inst",
+      "outputFiles": [
+        "CLAUDE.md"
+      ]
+    }
+  ]
+}

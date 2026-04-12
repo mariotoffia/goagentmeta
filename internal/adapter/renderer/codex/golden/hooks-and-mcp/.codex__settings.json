@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "validate-tool",
+        "matcher": "**/*.go"
+      }
+    ],
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "echo starting"
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "cleanup"
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "command",
+  "description": "Schema for command objects — explicit user-invoked entry points",
+  "properties": {
+    "action": {
+      "type": "object",
+      "description": "Executable action",
+      "properties": {
+        "type": { "type": "string" },
+        "ref": { "type": "string" }
+      },
+      "required": ["type", "ref"]
+    }
+  },
+  "required": ["action"]
+}

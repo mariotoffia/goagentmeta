@@ -1,0 +1,6 @@
+kind: instruction
+id: test-instruction
+name: Test Instruction
+preservation: preferred
+content: |
+  This is a test instruction for the fixture package.

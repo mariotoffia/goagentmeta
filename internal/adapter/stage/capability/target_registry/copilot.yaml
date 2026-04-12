@@ -1,0 +1,16 @@
+target: copilot
+surfaces:
+  instructions.layeredFiles: native
+  instructions.scopedSections: native
+  rules.scopedRules: native
+  skills.bundles: native
+  skills.supportingFiles: native
+  agents.subagents: native
+  agents.toolPolicies: native
+  agents.handoffs: native
+  hooks.lifecycle: native
+  hooks.blockingValidation: native
+  commands.explicitEntryPoints: native
+  plugins.installablePackages: native
+  plugins.capabilityProviders: native
+  mcp.serverBindings: native

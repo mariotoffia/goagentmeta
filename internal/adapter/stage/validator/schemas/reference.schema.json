@@ -1,0 +1,12 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "reference",
+  "description": "Schema for reference objects — supplemental knowledge documents",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Relative path to the reference document"
+    }
+  },
+  "required": []
+}

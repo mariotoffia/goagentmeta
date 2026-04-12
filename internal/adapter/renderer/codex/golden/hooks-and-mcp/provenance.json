@@ -1,0 +1,30 @@
+{
+  "buildUnit": ".ai-build/codex/local-dev",
+  "target": "codex",
+  "entries": [
+    {
+      "sourceObject": "github-mcp",
+      "outputFiles": [
+        ".mcp.json"
+      ]
+    },
+    {
+      "sourceObject": "pre-tool-hook",
+      "outputFiles": [
+        ".codex/settings.json"
+      ]
+    },
+    {
+      "sourceObject": "session-hook",
+      "outputFiles": [
+        ".codex/settings.json"
+      ]
+    },
+    {
+      "sourceObject": "stop-hook",
+      "outputFiles": [
+        ".codex/settings.json"
+      ]
+    }
+  ]
+}

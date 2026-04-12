@@ -9,7 +9,7 @@ This document maps the canonical object model from [overview.md](overview.md) to
 | Platform | Instruction File | Rules Mechanism | Skills | Agents | Hooks | Plugins | MCP Config | Prompt Files |
 |---|---|---|---|---|---|---|---|---|
 | **Claude Code** | `CLAUDE.md` (hierarchical) | `.claude/rules/*.md` (`paths:` frontmatter) | `.claude/skills/` (SKILL.md) | `.claude/agents/*.md` | 24+ events, 4 types | `.claude-plugin/` (marketplace) | `.mcp.json` (`mcpServers`) | — (skills serve this role) |
-| **Cursor** | `AGENTS.md` (root + subdirs) | `.cursor/rules/*.md\|.mdc` (globs, alwaysApply, description) | — | — (single built-in Agent) | — | — | `.cursor/mcp.json` (`mcpServers`) | — |
+| **Cursor** | `AGENTS.md` (root + subdirs) | `.cursor/rules/*.md\|.mdc` (globs, alwaysApply, description) | Via plugins (adapted) | Custom modes + plugin subagents (adapted) | Native (beforeMCPExecution, shell hooks) | Cursor Marketplace (native) | `.cursor/mcp.json` (`mcpServers`) | — |
 | **Copilot (VS Code)** | `.github/copilot-instructions.md` + `AGENTS.md` | `.github/instructions/*.instructions.md` (`applyTo:` globs) | `.github/skills/` (SKILL.md) | `.github/agents/*.agent.md` | 8 events, command type | agent plugins (marketplace) | `.vscode/mcp.json` (`servers`) | `.github/prompts/*.prompt.md` |
 | **Codex CLI** | `AGENTS.md` (root + subdirs) | Rules | `.codex/skills/` (SKILL.md) | Custom agents | Hooks (supported) | Plugins (marketplace) | MCP (supported) | — |
 
@@ -89,7 +89,7 @@ All platforms that support skills follow the [AgentSkills.io](https://agentskill
 | **Claude Code** | `.claude/skills/<name>/SKILL.md` | AgentSkills.io |
 | **Copilot** | `.github/skills/<name>/SKILL.md` or `.claude/skills/` or `.agents/skills/` | AgentSkills.io |
 | **Codex** | `.codex/skills/<name>/SKILL.md` | AgentSkills.io |
-| **Cursor** | — (not supported) | — |
+| **Cursor** | Via Cursor Marketplace plugins (adapted) | AgentSkills.io (via plugins) |
 
 ### 4.2 Common Frontmatter
 
@@ -123,15 +123,15 @@ Skills may contain supporting files (templates, scripts, examples, references) a
 | **Claude Code** | `.claude/agents/*.md` | name, description, tools, disallowedTools, model, permissionMode, maxTurns, skills, mcpServers, hooks, memory, background, effort, isolation |
 | **Copilot** | `.github/agents/*.agent.md` | description, name, tools, agents (subagent list), model, user-invocable, disable-model-invocation, target, mcp-servers, handoffs, hooks |
 | **Codex** | Custom agents | Subagents, custom toolsets |
-| **Cursor** | — (not supported) | — |
+| **Cursor** | Custom modes (adapted) | name, system prompt, tools, model |
 
 ### 5.2 Cross-Platform Agent Features
 
 | Feature | Claude Code | Copilot | Codex | Cursor |
 |---|---|---|---|---|
-| Subagent delegation | `mayCall` list | `agents` list | Subagents | — |
-| Tool restriction | `tools`, `disallowedTools` | `tools` list | Yes | — |
-| Model selection | `model` | `model` (single or priority list) | Yes | — |
+| Subagent delegation | `mayCall` list | `agents` list | Subagents | Via plugins (adapted) |
+| Tool restriction | `tools`, `disallowedTools` | `tools` list | Yes | Custom modes (adapted) |
+| Model selection | `model` | `model` (single or priority list) | Yes | Custom modes (adapted) |
 | Scoped hooks | In frontmatter | `hooks` in frontmatter (preview) | — | — |
 | Handoffs | — | `handoffs` (label, agent, prompt, send, model) | — | — |
 | Skills preloading | `skills` | — | — | — |
@@ -159,8 +159,8 @@ The canonical model should represent handoffs as an optional agent property that
 |---|---|---|---|---|
 | SessionStart | ✓ | ✓ | ✓ | — |
 | UserPromptSubmit | ✓ | ✓ | ✓ | — |
-| PreToolUse | ✓ | ✓ | ✓ | — |
-| PostToolUse | ✓ | ✓ | ✓ | — |
+| PreToolUse | ✓ | ✓ | ✓ | ✓ (beforeMCPExecution) |
+| PostToolUse | ✓ | ✓ | ✓ | ✓ (afterMCPExecution) |
 | Stop | ✓ | ✓ | ✓ | — |
 | SubagentStart | ✓ | ✓ | — | — |
 | SubagentStop | ✓ | ✓ | — | — |
@@ -171,6 +171,7 @@ The canonical model should represent handoffs as an optional agent property that
 | FileChanged | ✓ | — | — | — |
 | TaskCreated | ✓ | — | — | — |
 | TaskCompleted | ✓ | — | — | — |
+| PreShellCommand | — | — | — | ✓ |
 
 ### 6.2 Hook Configuration Formats
 
@@ -180,17 +181,18 @@ The canonical model should represent handoffs as an optional agent property that
 | **Copilot** | `.github/hooks/*.json` | `hooks.EventName[].{type, command}` |
 | **Copilot (compat)** | `.claude/settings.json` | Reads Claude format, maps tool names |
 | **Codex** | Hooks config | Similar to Copilot CLI format |
-| **Cursor** | — | Not supported |
+| **Cursor** | Hooks config (see Cursor docs) | `beforeMCPExecution`, `afterMCPExecution`, `preShellCommand` hooks |
 
 ### 6.3 Hook Types
 
 - Claude Code: `command`, `http`, `prompt`, `agent`
 - Copilot: `command` only
 - Codex: `command` (bash/powershell variants)
+- Cursor: `command` (shell scripts that observe, block, or modify agent behavior)
 
 ### 6.4 Renderer Implications
 
-- **Cursor**: hooks must be omitted entirely. If `preservation: required`, the build must fail
+- **Cursor**: hooks are now natively supported. The renderer should emit hooks configuration for supported Cursor events (beforeMCPExecution, afterMCPExecution, preShellCommand). Events not supported by Cursor should be lowered or skipped
 - **Copilot reads Claude hook format**: renderers may emit Claude-format hooks and Copilot will consume them. However, matcher values are ignored by Copilot (hooks run on all matching events)
 - **Hook type lowering**: `http`, `prompt`, and `agent` hook types (Claude-only) must be lowered to `command` or skipped for other targets
 
@@ -223,11 +225,11 @@ my-plugin/
 | **Claude Code** | Claude plugin marketplace system | Git repos, npm, local paths |
 | **Copilot** | `github/copilot-plugins`, `github/awesome-copilot`, `anthropics/claude-code` | Via `chat.plugins.marketplaces` setting |
 | **Codex** | Plugin marketplace | — |
-| **Cursor** | — (not supported) | — |
+| **Cursor** | Cursor Marketplace (`cursor.com/marketplace`) | Team marketplaces (dashboard-managed) |
 
 ### 7.3 Renderer Implications
 
-- **Cursor**: plugins cannot be emitted. Plugin capabilities must be lowered to MCP server references if the plugin provides MCP, or skipped
+- **Cursor**: plugins are natively supported via the Cursor Marketplace. Plugins can provide MCPs, skills, and subagents. The renderer should emit plugin references where applicable
 - **Format compatibility**: renderers for Claude Code, Copilot, and Codex can share plugin packaging logic
 
 ---
@@ -325,20 +327,20 @@ targets:
     rules:
       scopedRules: native            # .cursor/rules/*.mdc with globs
     skills:
-      bundles: skipped               # not supported
-      supportingFiles: skipped
+      bundles: adapted               # via Cursor Marketplace plugins
+      supportingFiles: adapted       # via plugin-bundled skills
     agents:
-      subagents: skipped             # single built-in agent
-      toolPolicies: skipped
+      subagents: adapted             # custom modes + plugin subagents
+      toolPolicies: adapted          # custom modes support tool restrictions
       handoffs: skipped
     hooks:
-      lifecycle: skipped             # not supported
-      blockingValidation: skipped
+      lifecycle: native              # beforeMCPExecution, afterMCPExecution, preShellCommand
+      blockingValidation: native     # hooks can block agent actions
     commands:
       explicitEntryPoints: skipped   # no native equivalent
     plugins:
-      installablePackages: skipped   # not supported
-      capabilityProviders: skipped
+      installablePackages: native    # Cursor Marketplace (100s of plugins)
+      capabilityProviders: native    # plugins provide MCPs, skills, subagents
     mcp:
       serverBindings: native         # .cursor/mcp.json mcpServers key
 

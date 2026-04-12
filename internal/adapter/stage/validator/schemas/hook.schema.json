@@ -1,0 +1,54 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "hook",
+  "description": "Schema for hook objects — deterministic lifecycle automation",
+  "properties": {
+    "event": {
+      "type": "string",
+      "description": "Lifecycle event that triggers this hook"
+    },
+    "action": {
+      "type": "object",
+      "description": "Executable action",
+      "properties": {
+        "type": { "type": "string" },
+        "ref": { "type": "string" }
+      },
+      "required": ["type", "ref"]
+    },
+    "effect": {
+      "type": "object",
+      "description": "Semantic impact and enforcement",
+      "properties": {
+        "class": {
+          "type": "string",
+          "enum": ["observing", "validating", "transforming", "setup", "reporting"]
+        },
+        "enforcement": {
+          "type": "string",
+          "enum": ["blocking", "advisory", "best-effort"]
+        }
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Context data the hook receives",
+      "properties": {
+        "include": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "description": "Operational behavior",
+      "properties": {
+        "timeoutSeconds": { "type": "number" },
+        "maxRetries": { "type": "number" },
+        "failurePolicy": {
+          "type": "string",
+          "enum": ["fail-build", "warn", "ignore"]
+        }
+      }
+    }
+  },
+  "required": ["event", "action"]
+}

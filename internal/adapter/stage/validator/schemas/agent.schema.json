@@ -1,0 +1,68 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "agent",
+  "description": "Schema for agent objects — specialized delegate or orchestration wrapper",
+  "properties": {
+    "rolePrompt": {
+      "type": "string",
+      "description": "System prompt defining the agent specialization"
+    },
+    "links": {
+      "type": "object",
+      "description": "Linked objects",
+      "properties": {
+        "skills": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "description": "Skill IDs this agent has access to",
+      "items": { "type": "string" }
+    },
+    "requires": {
+      "type": "object",
+      "description": "Capability requirements",
+      "properties": {
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "toolPolicy": {
+      "type": "object",
+      "description": "Tool access decisions keyed by capability/tool name"
+    },
+    "delegation": {
+      "type": "object",
+      "description": "Delegation configuration",
+      "properties": {
+        "mayCall": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "handoffs": {
+      "type": "array",
+      "description": "Guided workflow transitions",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": { "type": "string" },
+          "agent": { "type": "string" },
+          "prompt": { "type": "string" },
+          "autoSend": { "type": "boolean" }
+        },
+        "required": ["label", "agent"]
+      }
+    },
+    "hooks": {
+      "type": "array",
+      "description": "Hook IDs scoped to this agent",
+      "items": { "type": "string" }
+    },
+    "model": {
+      "type": "string",
+      "description": "Preferred model for this agent"
+    }
+  },
+  "required": []
+}

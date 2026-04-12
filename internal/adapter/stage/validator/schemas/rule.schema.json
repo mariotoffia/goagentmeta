@@ -1,0 +1,30 @@
+{
+  "$schema": "goagentmeta/v1",
+  "kind": "rule",
+  "description": "Schema for rule objects — scoped or conditional policy",
+  "properties": {
+    "content": {
+      "type": "string",
+      "description": "Markdown rule text"
+    },
+    "conditions": {
+      "type": "array",
+      "description": "Activation conditions for the rule",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Condition kind (e.g., language, generated, path-pattern)"
+          },
+          "value": {
+            "type": "string",
+            "description": "Condition value"
+          }
+        },
+        "required": ["type", "value"]
+      }
+    }
+  },
+  "required": []
+}

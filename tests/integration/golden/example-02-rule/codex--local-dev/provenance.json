@@ -1,0 +1,18 @@
+{
+  "buildUnit": ".ai-build/codex/local-dev",
+  "target": "codex",
+  "entries": [
+    {
+      "sourceObject": "project-overview",
+      "outputFiles": [
+        "AGENTS.md"
+      ]
+    },
+    {
+      "sourceObject": "secrets-policy",
+      "outputFiles": [
+        "services/auth/**/AGENTS.md"
+      ]
+    }
+  ]
+}

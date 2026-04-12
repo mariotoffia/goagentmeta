@@ -1,0 +1,11 @@
+id: github-mcp
+kind: plugin
+preservation: preferred
+distribution:
+  mode: inline
+mcpServers:
+  github:
+    command: npx
+    args: ["@modelcontextprotocol/server-github"]
+content: |
+  GitHub MCP integration for repository access.

@@ -1,0 +1,48 @@
+{
+  "buildUnit": ".ai-build/claude/local-dev",
+  "target": "claude",
+  "entries": [
+    {
+      "sourceObject": "github-mcp",
+      "outputFiles": [
+        ".mcp.json"
+      ]
+    },
+    {
+      "sourceObject": "go-standards",
+      "outputFiles": [
+        "CLAUDE.md"
+      ]
+    },
+    {
+      "sourceObject": "go-testing",
+      "outputFiles": [
+        ".claude/skills/go-testing/SKILL.md"
+      ]
+    },
+    {
+      "sourceObject": "implementer",
+      "outputFiles": [
+        ".claude/agents/implementer.md"
+      ]
+    },
+    {
+      "sourceObject": "post-edit-lint",
+      "outputFiles": [
+        ".claude/settings.json"
+      ]
+    },
+    {
+      "sourceObject": "project-overview",
+      "outputFiles": [
+        "CLAUDE.md"
+      ]
+    },
+    {
+      "sourceObject": "secrets-policy",
+      "outputFiles": [
+        "**/*.go/CLAUDE.md"
+      ]
+    }
+  ]
+}

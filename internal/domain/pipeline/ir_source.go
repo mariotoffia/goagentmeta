@@ -6,7 +6,10 @@ import "github.com/mariotoffia/goagentmeta/internal/domain/model"
 // the raw parsed representation of all files under the .ai/ source tree,
 // before normalization, dependency resolution, or semantic analysis.
 type SourceTree struct {
-	// RootPath is the absolute path to the .ai/ directory.
+	// RootPath is the project root directory used for relative path
+	// resolution in the normalize phase. It is the parent of the source
+	// directory (e.g. the parent of .ai/) rather than the source directory
+	// itself.
 	RootPath string
 
 	// Objects holds every parsed canonical object with raw field values.

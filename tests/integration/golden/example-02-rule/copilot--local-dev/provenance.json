@@ -1,0 +1,19 @@
+{
+  "buildUnit": ".ai-build/copilot/local-dev",
+  "target": "copilot",
+  "entries": [
+    {
+      "sourceObject": "project-overview",
+      "outputFiles": [
+        ".github/copilot-instructions.md",
+        "AGENTS.md"
+      ]
+    },
+    {
+      "sourceObject": "secrets-policy",
+      "outputFiles": [
+        "services/auth/**/AGENTS.md"
+      ]
+    }
+  ]
+}

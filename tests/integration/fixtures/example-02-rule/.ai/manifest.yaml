@@ -1,0 +1,6 @@
+schemaVersion: 1
+project:
+  name: example-rule
+build:
+  defaultTargets: [claude, copilot, codex]
+  defaultProfiles: [local-dev]

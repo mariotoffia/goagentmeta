@@ -1,0 +1,18 @@
+{
+  "buildUnit": ".ai-build/claude/local-dev",
+  "target": "claude",
+  "entries": [
+    {
+      "sourceObject": "project-overview",
+      "outputFiles": [
+        "CLAUDE.md"
+      ]
+    },
+    {
+      "sourceObject": "secrets-policy",
+      "outputFiles": [
+        "services/auth/**/CLAUDE.md"
+      ]
+    }
+  ]
+}

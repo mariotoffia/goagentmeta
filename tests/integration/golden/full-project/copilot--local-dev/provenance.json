@@ -1,0 +1,51 @@
+{
+  "buildUnit": ".ai-build/copilot/local-dev",
+  "target": "copilot",
+  "entries": [
+    {
+      "sourceObject": "github-mcp",
+      "outputFiles": [
+        ".vscode/mcp.json"
+      ]
+    },
+    {
+      "sourceObject": "go-standards",
+      "outputFiles": [
+        ".github/copilot-instructions.md",
+        "AGENTS.md"
+      ]
+    },
+    {
+      "sourceObject": "go-testing",
+      "outputFiles": [
+        ".github/skills/go-testing/SKILL.md"
+      ]
+    },
+    {
+      "sourceObject": "implementer",
+      "outputFiles": [
+        ".github/agents/implementer.agent.md"
+      ]
+    },
+    {
+      "sourceObject": "post-edit-lint",
+      "outputFiles": [
+        ".claude/settings.json",
+        ".github/hooks/post-edit.json"
+      ]
+    },
+    {
+      "sourceObject": "project-overview",
+      "outputFiles": [
+        ".github/copilot-instructions.md",
+        "AGENTS.md"
+      ]
+    },
+    {
+      "sourceObject": "secrets-policy",
+      "outputFiles": [
+        "**/*.go/AGENTS.md"
+      ]
+    }
+  ]
+}

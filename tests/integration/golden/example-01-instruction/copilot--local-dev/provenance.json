@@ -1,0 +1,13 @@
+{
+  "buildUnit": ".ai-build/copilot/local-dev",
+  "target": "copilot",
+  "entries": [
+    {
+      "sourceObject": "go-standards",
+      "outputFiles": [
+        ".github/copilot-instructions.md",
+        "AGENTS.md"
+      ]
+    }
+  ]
+}

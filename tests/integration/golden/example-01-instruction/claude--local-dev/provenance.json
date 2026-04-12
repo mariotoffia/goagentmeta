@@ -1,0 +1,12 @@
+{
+  "buildUnit": ".ai-build/claude/local-dev",
+  "target": "claude",
+  "entries": [
+    {
+      "sourceObject": "go-standards",
+      "outputFiles": [
+        "CLAUDE.md"
+      ]
+    }
+  ]
+}

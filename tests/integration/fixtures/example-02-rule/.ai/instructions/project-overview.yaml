@@ -1,0 +1,5 @@
+id: project-overview
+kind: instruction
+preservation: preferred
+content: |
+  This is a Go microservice.

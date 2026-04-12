@@ -1,0 +1,12 @@
+{
+  "buildUnit": ".ai-build/codex/local-dev",
+  "target": "codex",
+  "entries": [
+    {
+      "sourceObject": "go-standards",
+      "outputFiles": [
+        "AGENTS.md"
+      ]
+    }
+  ]
+}

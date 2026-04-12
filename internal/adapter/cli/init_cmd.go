@@ -8,20 +8,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var initDir string
+
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Scaffold a new .ai/ directory structure",
-	Long: `Init creates a .ai/ directory with a default manifest and example
-objects to get started quickly.`,
+	Short: "Scaffold a new source directory structure",
+	Long: `Init creates a source directory (default .ai/) with a default manifest and
+example objects to get started quickly.`,
 	RunE: runInit,
+}
+
+func init() {
+	initCmd.Flags().StringVar(&initDir, "dir", ".ai", "source directory to scaffold")
 }
 
 func runInit(_ *cobra.Command, _ []string) error {
 	out := newOutputWriter()
 
-	aiDir := ".ai"
+	aiDir := initDir
 	if _, err := os.Stat(aiDir); err == nil {
-		return fmt.Errorf(".ai/ directory already exists; remove it first or use a different directory")
+		return fmt.Errorf("%s directory already exists; remove it first or use a different directory", aiDir)
 	}
 
 	dirs := []string{
@@ -89,10 +95,10 @@ content: |
 		return fmt.Errorf("write example rule: %w", err)
 	}
 
-	out.info(colorize(colorGreen, "✓") + " Initialized .ai/ directory")
-	out.info("  manifest:    .ai/manifest.yaml")
-	out.info("  instruction: .ai/instructions/code-style.yaml")
-	out.info("  rule:        .ai/rules/no-secrets.yaml")
+	out.info(colorize(colorGreen, "✓") + " Initialized " + aiDir + "/ directory")
+	out.info("  manifest:    %s/manifest.yaml", aiDir)
+	out.info("  instruction: %s/instructions/code-style.yaml", aiDir)
+	out.info("  rule:        %s/rules/no-secrets.yaml", aiDir)
 	out.info("")
 	out.info("Next: edit these files and run " + colorize(colorBold, "goagentmeta build"))
 

@@ -1,0 +1,8 @@
+id: binary-output
+kind: rule
+preservation: required
+conditions:
+  - type: language
+    value: go
+content: |
+  Manually compiled Go binaries must have .out postfix so .gitignore ignores them.

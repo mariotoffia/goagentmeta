@@ -1,0 +1,8 @@
+schemaVersion: 1
+project:
+  name: payment-service
+build:
+  defaultTargets: [claude, copilot, codex]
+  defaultProfiles: [local-dev]
+preservation:
+  default: preferred

@@ -1,0 +1,42 @@
+{
+  "buildUnit": ".ai-build/codex/local-dev",
+  "target": "codex",
+  "entries": [
+    {
+      "sourceObject": "github-mcp",
+      "outputFiles": [
+        ".mcp.json"
+      ]
+    },
+    {
+      "sourceObject": "go-standards",
+      "outputFiles": [
+        "AGENTS.md"
+      ]
+    },
+    {
+      "sourceObject": "go-testing",
+      "outputFiles": [
+        ".codex/skills/go-testing/SKILL.md"
+      ]
+    },
+    {
+      "sourceObject": "implementer",
+      "outputFiles": [
+        ".codex/agents/implementer.md"
+      ]
+    },
+    {
+      "sourceObject": "project-overview",
+      "outputFiles": [
+        "AGENTS.md"
+      ]
+    },
+    {
+      "sourceObject": "secrets-policy",
+      "outputFiles": [
+        "**/*.go/AGENTS.md"
+      ]
+    }
+  ]
+}

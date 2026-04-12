@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "github": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-github"
+      ]
+    }
+  }
+}

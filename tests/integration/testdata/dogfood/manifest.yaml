@@ -1,0 +1,9 @@
+schemaVersion: 1
+project:
+  name: goagentmeta
+  description: AI Agent Metadata Compiler — author once, compile to native artifacts for Claude, Copilot, and Codex
+build:
+  defaultTargets: [claude, copilot, codex]
+  defaultProfiles: [local-dev]
+preservation:
+  default: preferred

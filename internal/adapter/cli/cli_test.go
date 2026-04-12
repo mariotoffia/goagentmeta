@@ -31,6 +31,7 @@ func resetCLIFlags(t *testing.T) {
 	savedBuildFailFast := buildFailFast
 	savedBuildDryRun := buildDryRun
 	savedBuildSync := buildSync
+	savedInitDir := initDir
 	savedEnvNoColor := os.Getenv("NO_COLOR")
 
 	noColor = false
@@ -43,6 +44,7 @@ func resetCLIFlags(t *testing.T) {
 	buildFailFast = true
 	buildDryRun = false
 	buildSync = "build-only"
+	initDir = ".ai"
 	os.Unsetenv("NO_COLOR")
 
 	t.Cleanup(func() {
@@ -56,6 +58,7 @@ func resetCLIFlags(t *testing.T) {
 		buildFailFast = savedBuildFailFast
 		buildDryRun = savedBuildDryRun
 		buildSync = savedBuildSync
+		initDir = savedInitDir
 		rootCmd.SetArgs(nil)
 		rootCmd.SetOut(nil)
 		rootCmd.SetErr(nil)
@@ -562,6 +565,39 @@ func TestCmd_InitAlreadyExists(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "already exists") {
 		t.Errorf("error should mention 'already exists': %v", err)
+	}
+}
+
+func TestCmd_InitCustomDir(t *testing.T) {
+	resetCLIFlags(t)
+	noColor = true
+	dir := t.TempDir()
+	chdir(t, dir)
+
+	captureStdout(t, func() {
+		rootCmd.SetArgs([]string{"init", "--dir", "custom-source"})
+		if err := rootCmd.Execute(); err != nil {
+			t.Fatalf("Execute error: %v", err)
+		}
+	})
+
+	for _, path := range []string{
+		"custom-source/manifest.yaml",
+		"custom-source/instructions/code-style.yaml",
+		"custom-source/rules/no-secrets.yaml",
+	} {
+		if _, err := os.Stat(filepath.Join(dir, path)); err != nil {
+			t.Errorf("expected file %s to exist: %v", path, err)
+		}
+	}
+
+	for _, d := range []string{"custom-source/skills", "custom-source/agents"} {
+		info, err := os.Stat(filepath.Join(dir, d))
+		if err != nil {
+			t.Errorf("expected directory %s: %v", d, err)
+		} else if !info.IsDir() {
+			t.Errorf("%s should be a directory", d)
+		}
 	}
 }
 

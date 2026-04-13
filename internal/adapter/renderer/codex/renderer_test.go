@@ -512,7 +512,7 @@ func TestSkillGeneration(t *testing.T) {
 		"iam-skill": keptSkill("iam-skill", "Review IAM policies.", map[string]any{
 			"description":     "IAM review skill",
 			"activationHints": []any{"IAM", "security"},
-			"allowedTools":    []any{"Read"},
+			"tools":           []any{"Read"},
 		}),
 	})
 
@@ -649,15 +649,12 @@ func TestAgentGeneration(t *testing.T) {
 	}
 }
 
-func TestAgentWithToolPolicy(t *testing.T) {
+func TestAgentWithTools(t *testing.T) {
 	r := codex.New(nil)
 	graph := loweredGraph(map[string]pipeline.LoweredObject{
 		"secure-agent": keptAgent("secure-agent", "Security agent.", map[string]any{
-			"toolPolicy": map[string]any{
-				"Read":   "allow",
-				"Write":  "deny",
-				"Delete": "deny",
-			},
+			"tools":           []any{"Read"},
+			"disallowedTools": []any{"Delete", "Write"},
 		}),
 	})
 
@@ -1570,7 +1567,7 @@ func TestFullProject(t *testing.T) {
 		"iam-skill": keptSkill("iam-skill", "Review IAM policies thoroughly.", map[string]any{
 			"description":     "IAM review skill",
 			"activationHints": []any{"IAM", "security"},
-			"allowedTools":    []any{"Read"},
+			"tools":           []any{"Read"},
 		}),
 		"review-agent": keptAgent("review-agent", "You specialize in code review.", map[string]any{
 			"description": "Review agent",

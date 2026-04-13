@@ -1,13 +1,13 @@
 # Tool Plugin System
 
-The tool plugin system validates tool expressions that appear in `Skill.allowedTools` and `Agent.toolPolicy`. Each tool plugin describes a single tool keyword, its optional parameterized syntax, and validation logic.
+The tool plugin system validates tool expressions that appear in `Skill.tools`, `Skill.disallowedTools`, `Agent.tools`, and `Agent.disallowedTools`. Each tool plugin describes a single tool keyword, its optional parameterized syntax, and validation logic.
 
 ## Concepts
 
 | Concept | Description |
 |---|---|
 | **Tool keyword** | The canonical name of a tool: `Read`, `Bash`, `WebSearch`, `mcp` |
-| **Tool expression** | A full tool reference as written in `allowedTools` or `toolPolicy`. May be a bare keyword (`Read`) or parameterized (`Bash(go:*)`, `mcp__github__list-repos`) |
+| **Tool expression** | A full tool reference as written in `tools` or `disallowedTools`. May be a bare keyword (`Read`) or parameterized (`Bash(go:*)`, `mcp__github__list-repos`) |
 | **Tool plugin** | An implementation of the `tool.Plugin` interface that validates expressions for one keyword |
 | **Tool registry** | A `tool.Registry` holding all registered plugins |
 
@@ -68,7 +68,7 @@ MCP tool references use `__` as a separator. The `mcp` keyword is implicit from 
 **Bash syntax:** The scoped form restricts which commands and arguments the tool may execute:
 
 ```yaml
-allowedTools:
+tools:
   - Bash                      # Unrestricted shell access
   - "Bash(go:*)"              # Only `go` commands, any arguments
   - "Bash(golangci-lint:*)"   # Only `golangci-lint` commands
@@ -136,7 +136,7 @@ The format is `Bash(<command>:<glob>)` where:
 **MCP syntax:** References follow the `mcp__<server-name>__<tool-name>` convention:
 
 ```yaml
-allowedTools:
+tools:
   - mcp__context7__resolve-library-id
   - mcp__context7__query-docs
   - mcp__github__list-repos
@@ -155,24 +155,28 @@ Tool expressions are validated during the `PhaseValidate` stage across several d
 |---|---|---|
 | Unknown tool keyword | **warning** | `"FooTool"` — not registered |
 | Invalid syntax for known tool | **error** | `"Bash()"` — empty args |
-| Invalid toolPolicy decision | **error** | `"Bash": "maybe"` — not allow/deny/ask |
-| Recognized capability ID | **pass** | `"filesystem.write"` in toolPolicy |
+| Recognized capability ID | **warning** | `"filesystem.write"` in tools or disallowedTools — should use concrete tool name instead |
 
 Unknown tools produce warnings (not errors) because provider-specific tools may not be in the built-in registry.
 
 ### Capability ID Recognition
 
-`toolPolicy` keys may be capability IDs rather than tool names. The registry recognizes all standard capability IDs:
+Capability IDs belong in the `requires:` field, **not** in `tools:` or `disallowedTools:`. The `tools` and `disallowedTools` fields should contain concrete tool names (e.g., `Read`, `Edit`, `Bash`). The validator recognizes capability IDs in these fields only so it can produce a helpful warning — it does not treat them as valid tool expressions.
 
 ```yaml
-toolPolicy:
-  filesystem.write: allow    # ✓ recognized capability ID — no warning
-  terminal.exec: deny        # ✓ recognized capability ID
-  Read: allow                # ✓ recognized tool keyword
-  FooTool: deny              # ⚠ warning: unknown tool
+requires:
+  - filesystem.write          # ✓ correct — capability IDs go in requires
+  - terminal.exec             # ✓ correct
+tools:
+  - Edit                      # ✓ concrete tool name
+  - Read                      # ✓ concrete tool name
+  - "Bash(go:*)"              # ✓ parameterized tool expression
+disallowedTools:
+  - WebFetch                  # ✓ concrete tool name
+  - FooTool                   # ⚠ warning: unknown tool
 ```
 
-Standard capability IDs: `filesystem.read`, `filesystem.write`, `filesystem.read-system`, `terminal.exec`, `terminal.exec-restricted`, `repo.search`, `repo.graph.query`, `repo.history`, `mcp.github`, `mcp.slack`, `mcp.jira`, `mcp.postgres`, `mcp.memory`, `network.http`, `network.http.outbound`, `secrets.read`.
+Standard capability IDs (for use in `requires:` only): `filesystem.read`, `filesystem.write`, `filesystem.read-system`, `terminal.exec`, `terminal.exec-restricted`, `repo.search`, `repo.graph.query`, `repo.history`, `mcp.github`, `mcp.slack`, `mcp.jira`, `mcp.postgres`, `mcp.memory`, `network.http`, `network.http.outbound`, `secrets.read`.
 
 ### Capability Cross-Referencing
 
@@ -191,13 +195,13 @@ Each tool plugin declares which capabilities it relates to:
 
 ### Bash ↔ binaryDeps Cross-Validation
 
-When a skill declares `Bash(<command>:*)` in `allowedTools` and also declares `binaryDeps`, the validator checks that each Bash command name appears in the binary deps list:
+When a skill declares `Bash(<command>:*)` in `tools` and also declares `binaryDeps`, the validator checks that each Bash command name appears in the binary deps list:
 
 ```yaml
 ---
 id: my-skill
 kind: skill
-allowedTools:
+tools:
   - "Bash(go:*)"            # ← uses "go"
   - "Bash(golangci-lint:*)"  # ← uses "golangci-lint"
 binaryDeps:
@@ -273,4 +277,4 @@ Tool plugins and capabilities are complementary:
 | **Capability** | Declares abstract requirements | `terminal.exec` is needed |
 | **Provider** | Satisfies capabilities at runtime | Plugin X provides `terminal.exec` |
 
-`toolPolicy` keys may be either tool keywords or capability IDs. The validator warns (does not error) for unknown keys in `toolPolicy` to accommodate both.
+`tools` and `disallowedTools` entries should be tool keywords (concrete tool names or parameterized expressions). Capability IDs belong in `requires:`. The validator warns for unknown entries and for capability IDs found in tool fields.

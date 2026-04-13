@@ -58,7 +58,7 @@ activation:
     - aws
     - serverless
     - api-gateway
-allowedTools:
+tools:
   - Read
   - Write
   - Edit
@@ -173,7 +173,7 @@ flowchart TD
     S --> RES[resources]
     RES --> REF[references/aws-lambda-patterns.md]
     S --> ACT[activation hints: lambda, aws, serverless]
-    S --> TOOLS[allowedTools: Read, Write, Bash go:*]
+    S --> TOOLS[tools: Read, Write, Bash go:*]
     S --> INST[installSteps: goimports via go install]
 ```
 
@@ -220,7 +220,7 @@ slog.InfoContext(ctx, "processing request", "requestId", request.RequestContext.
 
 - **`userInvocable: true`** — Enables `/go-aws-lambda` as a slash command on Claude Code and Copilot
 - **`activation.hints`** — The AI auto-loads this skill when it detects keywords like "lambda" or "api-gateway" in the conversation
-- **`allowedTools`** — Restricts which tools this skill can use; `"Bash(go:*)"` allows any `go` subcommand
+- **`tools`** — Restricts which tools this skill can use; `"Bash(go:*)"` allows any `go` subcommand
 - **`resources.references`** — Points at in-depth docs the AI reads on demand (not always loaded)
 
 ---

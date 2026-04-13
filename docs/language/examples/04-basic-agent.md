@@ -49,12 +49,12 @@ requires:
   - terminal.exec
   - repo.search
 
-toolPolicy:
-  filesystem.read: allow
-  filesystem.write: allow
-  terminal.exec: allow
-  network.http: deny          # No direct network access
-  secrets.read: ask           # Prompt user before reading any secret
+tools:
+  - Read
+  - Edit
+  - Bash
+disallowedTools:
+  - WebFetch                  # No direct network access
 
 handoffs:
   - label: Start Security Review
@@ -98,10 +98,12 @@ requires:
   - filesystem.read
   - repo.search
 
-toolPolicy:
-  filesystem.read: allow
-  filesystem.write: deny      # Reviewer does not modify code
-  terminal.exec: deny
+tools:
+  - Read
+disallowedTools:
+  - Write                     # Reviewer does not modify code
+  - Edit
+  - Bash
 ---
 
 You are a security reviewer specializing in Go microservices.
@@ -162,16 +164,16 @@ sequenceDiagram
 
 ## Tool Policy Details
 
-The `toolPolicy` map controls access at the capability level:
+The `tools` and `disallowedTools` lists control access at the tool level:
 
 ```yaml
-toolPolicy:
-  filesystem.write: allow   # ✅ Can write files
-  network.http: deny        # ❌ Cannot make HTTP calls
-  secrets.read: ask         # ⚠️ Must ask user first
+tools:
+  - Edit                      # ✅ Can edit files
+disallowedTools:
+  - WebFetch                  # ❌ Cannot make HTTP calls
 ```
 
-This is more expressive than `allowedTools` on a skill — it supports `deny` and `ask` in addition to `allow`.
+Skills and agents share the same tool model — both use `tools` (allowed) and `disallowedTools` (denied).
 
 ---
 
@@ -179,7 +181,7 @@ This is more expressive than `allowedTools` on a skill — it supports `deny` an
 
 - **`skills`** — The agent has access to all skills listed; it decides when to invoke them based on the task
 - **`rolePrompt`** — Write it as an imperative system prompt; include both responsibilities and constraints
-- **`toolPolicy`** — Use `deny` for capabilities that should never be used; `ask` for sensitive capabilities
+- **`tools` / `disallowedTools`** — Use `tools` for concrete tool names that should be allowed; `disallowedTools` for tools that should never be used
 - **`handoffs`** — A guided workflow transition; `autoSend: false` means the user controls when it triggers
 
 ---

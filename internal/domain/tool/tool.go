@@ -1,8 +1,8 @@
 // Package tool defines the domain model for tool plugins. A tool plugin
 // describes a single tool keyword (e.g., "Bash", "Read", "WebSearch") that
-// may appear in Skill.AllowedTools or Agent.ToolPolicy. Each plugin knows
-// how to validate expressions using its keyword and optionally declares a
-// parameterized syntax grammar.
+// may appear in Skill.Tools, Skill.DisallowedTools, Agent.Tools, or
+// Agent.DisallowedTools. Each plugin knows how to validate expressions
+// using its keyword and optionally declares a parameterized syntax grammar.
 package tool
 
 import (
@@ -42,12 +42,12 @@ type Plugin interface {
 	// RelatedCapabilities returns capability IDs that this tool implements
 	// or relates to. For example, the Read tool relates to "filesystem.read"
 	// and the Bash tool relates to "terminal.exec". This enables the
-	// validator to cross-reference toolPolicy capability keys with tools.
+	// validator to cross-reference tools/disallowedTools capability entries with tools.
 	RelatedCapabilities() []string
 
 	// Validate checks whether the given expression is a valid use of
 	// this tool. The expression is the full string as it appears in
-	// allowedTools or toolPolicy (e.g., "Bash(go:*)" or "Read").
+	// tools or disallowedTools (e.g., "Bash(go:*)" or "Read").
 	//
 	// Returns nil if the expression is valid, or an error describing
 	// the problem.
@@ -131,8 +131,8 @@ func (r *Registry) Register(p Plugin) error {
 }
 
 // RegisterCapabilityID adds a known capability ID to the registry without
-// associating it with a specific tool. This allows toolPolicy keys like
-// "filesystem.write" or "network.http" to pass validation.
+// associating it with a specific tool. This allows tools/disallowedTools
+// entries like "filesystem.write" or "network.http" to pass validation.
 func (r *Registry) RegisterCapabilityID(id string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

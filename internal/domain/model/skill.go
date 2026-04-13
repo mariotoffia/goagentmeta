@@ -30,12 +30,14 @@ type Skill struct {
 	// DisableModelInvocation prevents the AI from auto-loading this skill.
 	DisableModelInvocation bool
 
-	// AllowedTools lists tool permission expressions that this skill is
-	// allowed to use. Entries may be exact tool names (e.g., "Read", "Write")
-	// or glob/prefix patterns (e.g., "Bash(go:*)"). This is a flat allowlist
-	// matching the AgentSkills.io format — contrast with Agent.ToolPolicy
-	// which is a richer allow/deny/ask map.
-	AllowedTools []string
+	// Tools lists tool permission expressions that this skill is allowed to
+	// use. Entries may be exact tool names (e.g., "Read", "Write") or
+	// glob/prefix patterns (e.g., "Bash(go:*)").
+	Tools []string
+
+	// DisallowedTools lists tool permission expressions that this skill is
+	// explicitly denied from using.
+	DisallowedTools []string
 
 	// Compatibility is a free-text statement describing which platforms,
 	// runtimes, or AI coding agents this skill is designed for.

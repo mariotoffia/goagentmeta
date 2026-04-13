@@ -157,8 +157,9 @@ func (r *Renderer) renderUnit(
 	files = renderAgents(classified.agents, r.objects)
 	emission.Files = append(emission.Files, files...)
 
-	// Layer 5: Hooks → .github/hooks/{event}.json AND .claude/settings.json (compat)
-	files = renderHooks(classified.hooks)
+	// Layer 5: Settings → .github/hooks/{event}.json + .claude/settings.json (compat)
+	perms := collectPermissions(classified.agents, classified.skills)
+	files = renderSettings(classified.hooks, perms)
 	emission.Files = append(emission.Files, files...)
 
 	// Layer 6: Commands → .github/prompts/{id}.prompt.md

@@ -100,14 +100,14 @@ func TestGolden_FullProject(t *testing.T) {
 		"iam-skill": keptSkill("iam-skill", "Review IAM policies thoroughly.", map[string]any{
 			"description":     "IAM review skill",
 			"activationHints": []any{"IAM", "security"},
-			"allowedTools":    []any{"Read"},
+			"tools":           []any{"Read"},
 		}),
 		"review-agent": keptAgent("review-agent", "You specialize in code review.", map[string]any{
 			"description": "Review agent",
 			"skills":      []any{"iam-skill"},
 			"delegation":  map[string]any{"mayCall": []any{"deploy-agent"}},
 		}),
-		"lint-hook":     keptHook("lint-hook", "post-edit", "command", "make lint", nil),
+		"lint-hook": keptHook("lint-hook", "post-edit", "command", "make lint", nil),
 		"github-plugin": keptPlugin("github-plugin", map[string]any{
 			"mcpServers": map[string]any{
 				"github": map[string]any{

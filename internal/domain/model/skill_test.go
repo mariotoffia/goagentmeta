@@ -6,20 +6,20 @@ import (
 	"github.com/mariotoffia/goagentmeta/internal/domain/model"
 )
 
-func TestSkillAllowedTools(t *testing.T) {
+func TestSkillTools(t *testing.T) {
 	skill := model.Skill{
-		AllowedTools: []string{
+		Tools: []string{
 			"Read", "Edit", "Write", "Glob", "Grep",
 			"Bash(go:*)", "Bash(golangci-lint:*)", "Bash(git:*)",
 			"Agent", "WebFetch",
 		},
 	}
 
-	if len(skill.AllowedTools) != 10 {
-		t.Fatalf("len(AllowedTools) = %d, want 10", len(skill.AllowedTools))
+	if len(skill.Tools) != 10 {
+		t.Fatalf("len(Tools) = %d, want 10", len(skill.Tools))
 	}
-	if skill.AllowedTools[5] != "Bash(go:*)" {
-		t.Errorf("AllowedTools[5] = %q, want %q", skill.AllowedTools[5], "Bash(go:*)")
+	if skill.Tools[5] != "Bash(go:*)" {
+		t.Errorf("Tools[5] = %q, want %q", skill.Tools[5], "Bash(go:*)")
 	}
 }
 
@@ -111,7 +111,7 @@ func TestSkillFullAgentSkillsIoMapping(t *testing.T) {
 		},
 		UserInvocable: true,
 		Compatibility: "Designed for Claude Code or similar AI coding agents, and for projects using Golang.",
-		AllowedTools: []string{
+		Tools: []string{
 			"Read", "Edit", "Write", "Glob", "Grep",
 			"Bash(go:*)", "Bash(golangci-lint:*)", "Bash(git:*)",
 			"Agent", "WebFetch",
@@ -148,7 +148,7 @@ func TestSkillFullAgentSkillsIoMapping(t *testing.T) {
 		{"License", skill.License != ""},
 		{"UserInvocable", skill.UserInvocable},
 		{"Compatibility", skill.Compatibility != ""},
-		{"AllowedTools", len(skill.AllowedTools) > 0},
+		{"Tools", len(skill.Tools) > 0},
 		{"BinaryDeps", len(skill.BinaryDeps) > 0},
 		{"InstallSteps", len(skill.InstallSteps) > 0},
 		{"Publishing.Author", skill.Publishing.Author != ""},

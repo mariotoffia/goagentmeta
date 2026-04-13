@@ -10,10 +10,14 @@ skills:
 requires:
   - filesystem.read
   - repo.search
-toolPolicy:
-  filesystem.read: allow
-  filesystem.write: deny
-  terminal.exec: deny
+tools:
+  - Read
+  - Grep
+  - Glob
+disallowedTools:
+  - Write
+  - Edit
+  - Bash
 delegation:
   mayCall: []
 appliesTo:

@@ -42,11 +42,11 @@ var (
 // supports. Hooks with events not in this set are filtered out with a
 // diagnostic warning.
 var codexSupportedHookEvents = map[string]bool{
-	"SessionStart":      true,
-	"UserPromptSubmit":  true,
-	"PreToolUse":        true,
-	"PostToolUse":       true,
-	"Stop":              true,
+	"SessionStart":     true,
+	"UserPromptSubmit": true,
+	"PreToolUse":       true,
+	"PostToolUse":      true,
+	"Stop":             true,
 }
 
 // Renderer implements the Codex CLI target renderer. It orchestrates
@@ -174,8 +174,9 @@ func (r *Renderer) renderUnit(
 	files = renderAgents(classified.agents, r.objects)
 	emission.Files = append(emission.Files, files...)
 
-	// Layer 5: Hooks → .codex/settings.json (filtered to supported events)
-	files = renderHooks(ctx, classified.hooks)
+	// Layer 5: Settings → .codex/settings.json (hooks + permissions)
+	perms := collectPermissions(classified.agents, classified.skills)
+	files = renderSettings(ctx, classified.hooks, perms)
 	emission.Files = append(emission.Files, files...)
 
 	// Layer 6: MCP config → .mcp.json

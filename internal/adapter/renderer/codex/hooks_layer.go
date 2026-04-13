@@ -9,15 +9,11 @@ import (
 	"github.com/mariotoffia/goagentmeta/internal/domain/pipeline"
 )
 
-// renderHooks generates .codex/settings.json containing the hooks section.
+// renderSettings generates .codex/settings.json containing hooks and permissions.
 // Hooks are grouped by Event → []{type, command, matcher} as per Codex CLI's
 // hooks convention. Only events in codexSupportedHookEvents are emitted;
 // hooks for unsupported events are filtered with a diagnostic warning.
-func renderHooks(ctx context.Context, hooks []pipeline.LoweredObject) []pipeline.EmittedFile {
-	if len(hooks) == 0 {
-		return nil
-	}
-
+func renderSettings(ctx context.Context, hooks []pipeline.LoweredObject, permissions *permissionsJSON) []pipeline.EmittedFile {
 	hooksMap := make(map[string][]hookEntry)
 	var sourceObjects []string
 	var unsupportedEvents []string
@@ -57,7 +53,8 @@ func renderHooks(ctx context.Context, hooks []pipeline.LoweredObject) []pipeline
 		})
 	}
 
-	if len(hooksMap) == 0 {
+	// If neither hooks nor permissions exist, nothing to emit.
+	if len(hooksMap) == 0 && permissions == nil {
 		return nil
 	}
 
@@ -72,8 +69,12 @@ func renderHooks(ctx context.Context, hooks []pipeline.LoweredObject) []pipeline
 		})
 	}
 
-	settings := settingsJSON{
-		Hooks: hooksMap,
+	settings := settingsJSON{}
+	if len(hooksMap) > 0 {
+		settings.Hooks = hooksMap
+	}
+	if permissions != nil {
+		settings.Permissions = permissions
 	}
 
 	data, err := json.MarshalIndent(settings, "", "  ")
@@ -95,9 +96,51 @@ func renderHooks(ctx context.Context, hooks []pipeline.LoweredObject) []pipeline
 	}
 }
 
+// collectPermissions aggregates tool expressions from agents and skills into
+// a permissions struct. Returns nil if no tool expressions are present.
+func collectPermissions(agents, skills []pipeline.LoweredObject) *permissionsJSON {
+	allowSet := make(map[string]bool)
+	denySet := make(map[string]bool)
+
+	for _, obj := range append(agents, skills...) {
+		if tools := getFieldStringSlice(obj, "tools"); len(tools) > 0 {
+			for _, t := range tools {
+				allowSet[t] = true
+			}
+		}
+		if denied := getFieldStringSlice(obj, "disallowedTools"); len(denied) > 0 {
+			for _, t := range denied {
+				denySet[t] = true
+			}
+		}
+	}
+
+	if len(allowSet) == 0 && len(denySet) == 0 {
+		return nil
+	}
+
+	perms := &permissionsJSON{}
+	for t := range allowSet {
+		perms.Allow = append(perms.Allow, t)
+	}
+	for t := range denySet {
+		perms.Deny = append(perms.Deny, t)
+	}
+	sort.Strings(perms.Allow)
+	sort.Strings(perms.Deny)
+	return perms
+}
+
 // settingsJSON is the structure of .codex/settings.json.
 type settingsJSON struct {
-	Hooks map[string][]hookEntry `json:"hooks"`
+	Hooks       map[string][]hookEntry `json:"hooks,omitempty"`
+	Permissions *permissionsJSON       `json:"permissions,omitempty"`
+}
+
+// permissionsJSON holds tool permission entries for settings.json.
+type permissionsJSON struct {
+	Allow []string `json:"allow,omitempty"`
+	Deny  []string `json:"deny,omitempty"`
 }
 
 // hookEntry is a single hook entry in settings.json.

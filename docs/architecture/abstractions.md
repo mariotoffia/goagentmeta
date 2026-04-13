@@ -28,11 +28,11 @@ This document inventories every abstraction (type, interface, constant set) in t
 | `Instruction` | `Content` | Always-on guidance text, scoped by path/fileType |
 | `Rule` | `Content`, `Conditions []RuleCondition` | Conditional guidance with activation predicates |
 | `RuleCondition` | `Type`, `Value` | Condition predicate (language, path-pattern, generated, file-extension, label) |
-| `Skill` | `Content`, `Requires`, `Resources`, `ActivationHints`, `UserInvocable`, `DisableModelInvocation`, `AllowedTools`, `Compatibility`, `BinaryDeps`, `InstallSteps`, `Publishing` | Reusable workflow bundle with tool permissions |
+| `Skill` | `Content`, `Requires`, `Resources`, `ActivationHints`, `UserInvocable`, `DisableModelInvocation`, `Tools`, `DisallowedTools`, `Compatibility`, `BinaryDeps`, `InstallSteps`, `Publishing` | Reusable workflow bundle with tool permissions |
 | `SkillResources` | `References`, `Assets`, `Scripts` | Supporting files for a skill |
 | `InstallStep` | `Kind`, `Package`, `Bins` | Binary dependency install step |
 | `SkillPublishing` | `Author`, `Homepage`, `Emoji` | Marketplace publishing metadata |
-| `Agent` | `RolePrompt`, `Skills`, `Requires`, `ToolPolicy`, `Delegation`, `Handoffs`, `Hooks`, `Model` | Specialized orchestration persona |
+| `Agent` | `RolePrompt`, `Skills`, `Requires`, `Tools`, `DisallowedTools`, `Delegation`, `Handoffs`, `Hooks`, `Model` | Specialized orchestration persona |
 | `AgentDelegation` | `MayCall` | Agents this agent may delegate to |
 | `Handoff` | `Label`, `Agent`, `Prompt`, `AutoSend` | Cross-agent handoff definition |
 | `Hook` | `Event`, `Action`, `Effect`, `Inputs`, `Policy` | Lifecycle automation trigger |

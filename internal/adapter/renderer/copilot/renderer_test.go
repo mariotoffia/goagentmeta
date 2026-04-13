@@ -535,7 +535,7 @@ func TestSkillInGitHubSkillsDir(t *testing.T) {
 		"iam-review": keptSkill("iam-review", "Review IAM policies.", map[string]any{
 			"description":     "IAM review skill",
 			"activationHints": []any{"IAM", "policy"},
-			"allowedTools":    []any{"Read", "Write"},
+			"tools":           []any{"Read", "Write"},
 			"resources": map[string]any{
 				"references": []any{"docs/iam-guide.md"},
 				"assets":     []any{"templates/iam.yaml"},
@@ -624,11 +624,8 @@ func TestAgentWithAgentMDExtension(t *testing.T) {
 			"description": "Code review agent",
 			"model":       "gpt-4o",
 			"skills":      []any{"iam-review"},
-			"toolPolicy": map[string]any{
-				"Read":  "allow",
-				"Write": "deny",
-				"Bash":  "allow",
-			},
+			"tools":           []any{"Bash", "Read"},
+			"disallowedTools": []any{"Write"},
 			"delegation": map[string]any{
 				"mayCall": []any{"deploy-agent", "test-agent"},
 			},
@@ -836,8 +833,8 @@ func TestMultipleHooksSameEvent(t *testing.T) {
 func TestHooksMultipleEventsSeparateFiles(t *testing.T) {
 	r := copilot.New(nil)
 	graph := loweredGraph(map[string]pipeline.LoweredObject{
-		"hook-post":   keptHook("hook-post", "post-edit", "command", "echo post", nil),
-		"hook-pre":    keptHook("hook-pre", "pre-tool-use", "command", "echo pre", nil),
+		"hook-post": keptHook("hook-post", "post-edit", "command", "echo post", nil),
+		"hook-pre":  keptHook("hook-pre", "pre-tool-use", "command", "echo pre", nil),
 	})
 
 	result, err := r.Execute(testContext(), graph)
@@ -1279,14 +1276,14 @@ func TestProvenanceJSON(t *testing.T) {
 
 func TestDeterministicOutput(t *testing.T) {
 	objects := map[string]pipeline.LoweredObject{
-		"inst-z":    keptInstruction("inst-z", "Z instruction.", nil),
-		"inst-a":    keptInstruction("inst-a", "A instruction.", nil),
-		"rule-b":    keptRule("rule-b", "B rule.", []string{"**/*.ts"}),
-		"rule-a":    keptRule("rule-a", "A rule.", []string{"**/*.go"}),
-		"skill-c":   keptSkill("skill-c", "C skill content.", nil),
-		"agent-x":   keptAgent("agent-x", "X agent prompt.", nil),
-		"hook-1":    keptHook("hook-1", "post-edit", "command", "lint", nil),
-		"cmd-1":     keptCommand("cmd-1", "Deploy.", nil),
+		"inst-z":  keptInstruction("inst-z", "Z instruction.", nil),
+		"inst-a":  keptInstruction("inst-a", "A instruction.", nil),
+		"rule-b":  keptRule("rule-b", "B rule.", []string{"**/*.ts"}),
+		"rule-a":  keptRule("rule-a", "A rule.", []string{"**/*.go"}),
+		"skill-c": keptSkill("skill-c", "C skill content.", nil),
+		"agent-x": keptAgent("agent-x", "X agent prompt.", nil),
+		"hook-1":  keptHook("hook-1", "post-edit", "command", "lint", nil),
+		"cmd-1":   keptCommand("cmd-1", "Deploy.", nil),
 		"plugin-m": keptPlugin("plugin-m", map[string]any{
 			"mcpServers": map[string]any{
 				"test-server": map[string]any{
@@ -1500,8 +1497,8 @@ func TestFullProjectAllObjectTypes(t *testing.T) {
 				map[string]any{"label": "Deploy", "agent": "deploy-agent"},
 			},
 		}),
-		"lint-hook":    keptHook("lint-hook", "post-edit", "command", "make lint", nil),
-		"deploy-cmd":   keptCommand("deploy-cmd", "Deploy the app.", map[string]any{"description": "Deploy command"}),
+		"lint-hook":  keptHook("lint-hook", "post-edit", "command", "make lint", nil),
+		"deploy-cmd": keptCommand("deploy-cmd", "Deploy the app.", map[string]any{"description": "Deploy command"}),
 		"github-plugin": keptPlugin("github-plugin", map[string]any{
 			"mcpServers": map[string]any{
 				"github": map[string]any{

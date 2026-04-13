@@ -18,7 +18,7 @@ activation:
     - render target
     - new platform
     - emit files
-allowedTools:
+tools:
   - Read
   - Write
   - Edit

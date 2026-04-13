@@ -16,7 +16,7 @@ activation:
     - entity
     - IR type
     - canonical object
-allowedTools:
+tools:
   - Read
   - Write
   - Edit

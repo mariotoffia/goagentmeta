@@ -17,9 +17,14 @@ type Agent struct {
 	// Requires lists capability IDs needed by this agent.
 	Requires []string
 
-	// ToolPolicy maps capability or tool names to access decisions.
-	// Values are typically "allow", "deny", or "ask".
-	ToolPolicy map[string]string
+	// Tools lists tool permission expressions that this agent is allowed to
+	// use. Entries may be exact tool names (e.g., "Read", "Write") or
+	// glob/prefix patterns (e.g., "Bash(go:*)").
+	Tools []string
+
+	// DisallowedTools lists tool permission expressions that this agent is
+	// explicitly denied from using.
+	DisallowedTools []string
 
 	// Delegation defines which other agents this agent may call.
 	Delegation AgentDelegation

@@ -157,8 +157,9 @@ func (r *Renderer) renderUnit(
 	files = renderAgents(classified.agents, r.objects)
 	emission.Files = append(emission.Files, files...)
 
-	// Layer 5: Hooks → .claude/settings.json
-	files = renderHooks(classified.hooks)
+	// Layer 5: Settings → .claude/settings.json (hooks + permissions)
+	perms := collectPermissions(classified.agents, classified.skills)
+	files = renderSettings(classified.hooks, perms)
 	emission.Files = append(emission.Files, files...)
 
 	// Layer 6: MCP config → .mcp.json

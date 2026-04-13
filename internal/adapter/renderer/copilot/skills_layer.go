@@ -46,9 +46,17 @@ func renderSkills(
 		}
 
 		// Copilot uses "tools" for allowed tools (not "allowed-tools").
-		if tools := getFieldStringSlice(skill, "allowedTools"); len(tools) > 0 {
+		if tools := getFieldStringSlice(skill, "tools"); len(tools) > 0 {
 			content.WriteString("tools:\n")
 			for _, t := range tools {
+				content.WriteString(fmt.Sprintf("  - %s\n", yamlScalar(t)))
+			}
+		}
+
+		// Disallowed tools.
+		if denied := getFieldStringSlice(skill, "disallowedTools"); len(denied) > 0 {
+			content.WriteString("disallowedTools:\n")
+			for _, t := range denied {
 				content.WriteString(fmt.Sprintf("  - %s\n", yamlScalar(t)))
 			}
 		}

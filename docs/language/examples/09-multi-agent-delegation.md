@@ -50,11 +50,13 @@ skills:
 requires:
   - filesystem.read
   - repo.search
-toolPolicy:
-  filesystem.read: allow
-  repo.search: allow
-  filesystem.write: deny    # Planner does not write code directly
-  terminal.exec: deny
+tools:
+  - Read
+  - Grep
+disallowedTools:
+  - Write                     # Planner does not write code directly
+  - Edit
+  - Bash
 delegation:
   mayCall:
     - go-implementer        # Planner can delegate to implementer
@@ -102,12 +104,12 @@ requires:
   - filesystem.write
   - terminal.exec
   - repo.search
-toolPolicy:
-  filesystem.read: allow
-  filesystem.write: allow
-  terminal.exec: allow
-  network.http: deny
-  secrets.read: ask
+tools:
+  - Read
+  - Edit
+  - Bash
+disallowedTools:
+  - WebFetch
 hooks:
   - post-edit-validate      # From example 05
 handoffs:
@@ -147,10 +149,12 @@ preservation: preferred
 requires:
   - filesystem.read
   - repo.search
-toolPolicy:
-  filesystem.read: allow
-  filesystem.write: deny
-  terminal.exec: deny
+tools:
+  - Read
+disallowedTools:
+  - Write
+  - Edit
+  - Bash
 handoffs:
   - label: Return to Implementer
     agent: go-implementer
@@ -263,7 +267,7 @@ A simple skill to help the planner structure its output:
 id: task-breakdown
 kind: skill
 description: Systematic task decomposition for Go microservice features
-allowedTools:
+tools:
   - Read
   - Grep
   - Glob

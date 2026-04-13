@@ -31,36 +31,19 @@ func renderAgents(
 			content.WriteString(fmt.Sprintf("description: %s\n", yamlScalar(desc)))
 		}
 
-		// Tool policy: allow/deny → tools and disallowedTools.
-		if toolPolicy, ok := agent.Fields["toolPolicy"].(map[string]any); ok {
-			var allowed, denied []string
-			tpKeys := make([]string, 0, len(toolPolicy))
-			for k := range toolPolicy {
-				tpKeys = append(tpKeys, k)
+		// Tools (allowed).
+		if tools := getFieldStringSlice(agent, "tools"); len(tools) > 0 {
+			content.WriteString("tools:\n")
+			for _, t := range tools {
+				content.WriteString(fmt.Sprintf("  - %s\n", t))
 			}
-			sortStrings(tpKeys)
+		}
 
-			for _, tool := range tpKeys {
-				if decision, ok := toolPolicy[tool].(string); ok {
-					switch decision {
-					case "allow":
-						allowed = append(allowed, tool)
-					case "deny":
-						denied = append(denied, tool)
-					}
-				}
-			}
-			if len(allowed) > 0 {
-				content.WriteString("tools:\n")
-				for _, t := range allowed {
-					content.WriteString(fmt.Sprintf("  - %s\n", t))
-				}
-			}
-			if len(denied) > 0 {
-				content.WriteString("disallowedTools:\n")
-				for _, t := range denied {
-					content.WriteString(fmt.Sprintf("  - %s\n", t))
-				}
+		// Disallowed tools.
+		if denied := getFieldStringSlice(agent, "disallowedTools"); len(denied) > 0 {
+			content.WriteString("disallowedTools:\n")
+			for _, t := range denied {
+				content.WriteString(fmt.Sprintf("  - %s\n", t))
 			}
 		}
 

@@ -154,11 +154,13 @@ requires:
   - mcp.github              # GitHub API access
   - filesystem.read         # Read local context if needed
 
-toolPolicy:
-  mcp.github: allow
-  filesystem.read: allow
-  filesystem.write: deny    # Reviewer does not modify local files
-  terminal.exec: deny
+tools:
+  - mcp__github__list-repos
+  - Read
+disallowedTools:
+  - Write                     # Reviewer does not modify local files
+  - Edit
+  - Bash
 ```
 
 ---

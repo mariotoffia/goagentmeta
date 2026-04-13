@@ -11,10 +11,14 @@ requires:
   - filesystem.read
   - terminal.exec
   - repo.search
-toolPolicy:
-  filesystem.read: allow
-  filesystem.write: deny
-  terminal.exec: allow
+tools:
+  - Read
+  - Grep
+  - Glob
+  - Bash
+disallowedTools:
+  - Write
+  - Edit
 delegation:
   mayCall: []
 appliesTo:

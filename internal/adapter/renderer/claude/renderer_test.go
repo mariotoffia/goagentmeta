@@ -437,7 +437,7 @@ func TestSkillWithResources(t *testing.T) {
 		"iam-review": keptSkill("iam-review", "Review IAM policies.", map[string]any{
 			"description":     "IAM review skill",
 			"activationHints": []any{"IAM", "policy"},
-			"allowedTools":    []any{"Read", "Write"},
+			"tools":           []any{"Read", "Write"},
 			"resources": map[string]any{
 				"references": []any{"docs/iam-guide.md"},
 				"assets":     []any{"templates/iam.yaml"},
@@ -533,11 +533,8 @@ func TestAgentWithDelegation(t *testing.T) {
 			"description": "Code review agent",
 			"model":       "claude-sonnet-4-20250514",
 			"skills":      []any{"iam-review", "go-review"},
-			"toolPolicy": map[string]any{
-				"Read":  "allow",
-				"Write": "deny",
-				"Bash":  "allow",
-			},
+			"tools":           []any{"Bash", "Read"},
+			"disallowedTools": []any{"Write"},
 			"delegation": map[string]any{
 				"mayCall": []any{"deploy-agent", "test-agent"},
 			},
@@ -879,13 +876,13 @@ func TestProvenanceJSON(t *testing.T) {
 
 func TestDeterministicOutput(t *testing.T) {
 	objects := map[string]pipeline.LoweredObject{
-		"inst-z":   keptInstruction("inst-z", "Z instruction.", nil),
-		"inst-a":   keptInstruction("inst-a", "A instruction.", nil),
-		"rule-b":   keptRule("rule-b", "B rule.", []string{"**/*.ts"}, nil),
-		"rule-a":   keptRule("rule-a", "A rule.", []string{"**/*.go"}, nil),
-		"skill-c":  keptSkill("skill-c", "C skill content.", nil),
-		"agent-x":  keptAgent("agent-x", "X agent prompt.", nil),
-		"hook-1":   keptHook("hook-1", "post-edit", "command", "lint", nil),
+		"inst-z":  keptInstruction("inst-z", "Z instruction.", nil),
+		"inst-a":  keptInstruction("inst-a", "A instruction.", nil),
+		"rule-b":  keptRule("rule-b", "B rule.", []string{"**/*.ts"}, nil),
+		"rule-a":  keptRule("rule-a", "A rule.", []string{"**/*.go"}, nil),
+		"skill-c": keptSkill("skill-c", "C skill content.", nil),
+		"agent-x": keptAgent("agent-x", "X agent prompt.", nil),
+		"hook-1":  keptHook("hook-1", "post-edit", "command", "lint", nil),
 		"plugin-m": keptPlugin("plugin-m", map[string]any{
 			"mcpServers": map[string]any{
 				"test-server": map[string]any{
@@ -1017,7 +1014,7 @@ func TestFullProjectAllObjectTypes(t *testing.T) {
 		"iam-skill": keptSkill("iam-skill", "Review IAM policies thoroughly.", map[string]any{
 			"description":     "IAM review skill",
 			"activationHints": []any{"IAM", "security"},
-			"allowedTools":    []any{"Read"},
+			"tools":           []any{"Read"},
 		}),
 		"review-agent": keptAgent("review-agent", "You specialize in code review.", map[string]any{
 			"description": "Review agent",

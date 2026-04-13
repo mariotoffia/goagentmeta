@@ -36,7 +36,7 @@ resources:
     - assets/templates/lambda_main.go.tmpl
   scripts:
     - scripts/skills/go-aws-lambda/test.sh
-allowedTools:
+tools:
   - Read
   - Write
   - Edit
@@ -150,10 +150,10 @@ activation:
 |---|---|---|
 | `activation.hints` | []string | Keywords/phrases that help the AI decide when to load this skill automatically. |
 
-### `allowedTools`
+### `tools`
 
 ```yaml
-allowedTools:
+tools:
   - Read
   - Write
   - Edit
@@ -164,10 +164,11 @@ allowedTools:
   - "Bash(aws:*)"
 ```
 
-Flat allowlist of tools this skill is permitted to use. Entries may be:
+List of tools this skill is permitted to use. Entries may be:
 - Exact tool names: `Read`, `Write`, `Edit`, `Glob`, `Grep`
 - Prefix/glob patterns: `"Bash(go:*)"` allows any `go` subcommand
-- This is a simple allowlist — contrast with `Agent.toolPolicy` which supports `allow`/`deny`/`ask`
+
+Skills and agents share the same tool model — both use `tools` (allowed) and `disallowedTools` (denied).
 
 ### `userInvocable`
 
@@ -294,7 +295,7 @@ This skill guides the AI through writing, running, and interpreting Go benchmark
 | `metadata.openclaw.homepage` | `Skill.Publishing.Homepage` |
 | `metadata.openclaw.requires.bins` | `Skill.BinaryDeps` |
 | `metadata.openclaw.install[]` | `Skill.InstallSteps` |
-| `allowed-tools` | `Skill.AllowedTools` |
+| `allowed-tools` | `Skill.Tools` |
 | Body (after `---`) | `Skill.Content` |
 
 ---
@@ -311,7 +312,7 @@ flowchart TD
     RES --> ASS[assets]
     RES --> SCR[scripts]
     S --> ACT[activation hints]
-    S --> TOOLS[allowedTools]
+    S --> TOOLS[tools]
     S --> INST[installSteps → binaryDeps]
     S --> PUB[publishing metadata]
 ```

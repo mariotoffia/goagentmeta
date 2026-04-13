@@ -20,7 +20,7 @@ activation:
     - write agent
     - create hook
     - create command
-allowedTools:
+tools:
   - Read
   - Write
   - Edit
@@ -113,7 +113,7 @@ kind: skill
 requires: [filesystem.read, terminal.exec]
 activation:
   hints: [architecture, review, hexagonal]
-allowedTools: [Read, Glob, Grep, Bash(go:*)]
+tools: [Read, Glob, Grep, Bash(go:*)]
 ---
 
 Workflow steps in **markdown**.
@@ -128,9 +128,10 @@ Specialized delegates with role prompt as body:
 id: code-reviewer
 kind: agent
 skills: [review-architecture]
-toolPolicy:
-  filesystem.read: allow
-  terminal.exec: deny
+tools:
+  - Read
+disallowedTools:
+  - Bash
 delegation:
   mayCall: [test-runner]
 ---

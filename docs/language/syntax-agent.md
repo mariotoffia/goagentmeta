@@ -22,10 +22,11 @@ requires:
   - filesystem.write
   - terminal.exec
   - repo.search
-toolPolicy:
-  filesystem.write: allow
-  terminal.exec: allow
-  network.http: deny
+tools:
+  - Edit
+  - Bash
+disallowedTools:
+  - WebFetch
 delegation:
   mayCall:
     - test-runner
@@ -108,25 +109,28 @@ requires:
 
 List of capability IDs this agent needs. The compiler validates that every required capability has a provider for each target. See [syntax-capability.md](syntax-capability.md).
 
-### `toolPolicy`
+### `tools`
 
 ```yaml
-toolPolicy:
-  filesystem.write: allow
-  terminal.exec: allow
-  network.http: deny
-  secrets.read: ask
+tools:
+  - Edit
+  - Bash
+  - Read
+  - "Bash(go:*)"
 ```
 
-A map from capability or tool name to an access decision. Valid decisions:
+List of concrete tool names this agent is permitted to use. Entries may be exact tool names or parameterized expressions. This is the same format used by skills.
 
-| Decision | Meaning |
-|---|---|
-| `allow` | Agent may use this capability without restriction |
-| `deny` | Agent is prohibited from using this capability |
-| `ask` | Agent must prompt the user for permission before use |
+### `disallowedTools`
 
-Contrast with `Skill.allowedTools` which is a flat allowlist. `toolPolicy` supports `deny` and `ask` decisions and is a richer policy surface.
+```yaml
+disallowedTools:
+  - WebFetch
+```
+
+List of concrete tool names this agent is explicitly denied from using. Any tool not in `tools` or `disallowedTools` follows the target's default policy.
+
+Agents and skills now share the same tool model — both use `tools` (allowed) and `disallowedTools` (denied).
 
 ### `delegation`
 

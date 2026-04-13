@@ -104,7 +104,7 @@ activation:
     - lambda
     - aws
     - go
-allowedTools:
+tools:
   - Read
   - Write
   - "Bash(go:*)"
@@ -169,7 +169,7 @@ allowed-tools: Read Edit Write Glob Grep Bash(go:*) Bash(golangci-lint:*)
 | `metadata.openclaw.homepage` | `Skill.Publishing.Homepage` |
 | `metadata.openclaw.requires.bins` | `Skill.BinaryDeps` |
 | `metadata.openclaw.install[]` | `Skill.InstallSteps` |
-| `allowed-tools` | `Skill.AllowedTools` |
+| `allowed-tools` | `Skill.Tools` |
 
 ---
 
@@ -188,10 +188,11 @@ requires:
   - filesystem.write
   - terminal.exec
   - repo.search
-toolPolicy:
-  filesystem.write: allow
-  terminal.exec: allow
-  network.http: deny
+tools:
+  - Edit
+  - Bash
+disallowedTools:
+  - WebFetch
 delegation:
   mayCall:
     - test-runner

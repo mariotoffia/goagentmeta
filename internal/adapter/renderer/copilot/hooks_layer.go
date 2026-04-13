@@ -7,15 +7,11 @@ import (
 	"github.com/mariotoffia/goagentmeta/internal/domain/pipeline"
 )
 
-// renderHooks generates both .github/hooks/{event}.json per event type (Copilot
-// native) AND .claude/settings.json (compatibility layer). Copilot only supports
-// "command" hook types. Matcher values are OMITTED in the Copilot hook output
-// since Copilot ignores them.
-func renderHooks(hooks []pipeline.LoweredObject) []pipeline.EmittedFile {
-	if len(hooks) == 0 {
-		return nil
-	}
-
+// renderSettings generates both .github/hooks/{event}.json per event type (Copilot
+// native) AND .claude/settings.json (compatibility layer) with hooks and permissions.
+// Copilot only supports "command" hook types. Matcher values are OMITTED in the
+// Copilot hook output since Copilot ignores them.
+func renderSettings(hooks []pipeline.LoweredObject, permissions *permissionsJSON) []pipeline.EmittedFile {
 	// Build hooks map: event → []hookEntry.
 	hooksMap := make(map[string][]hookEntry)
 	var sourceObjects []string
@@ -35,10 +31,6 @@ func renderHooks(hooks []pipeline.LoweredObject) []pipeline.EmittedFile {
 		sourceObjects = append(sourceObjects, hook.OriginalID)
 	}
 
-	if len(hooksMap) == 0 {
-		return nil
-	}
-
 	// Sort entries within each event group for determinism.
 	for event := range hooksMap {
 		entries := hooksMap[event]
@@ -52,6 +44,11 @@ func renderHooks(hooks []pipeline.LoweredObject) []pipeline.EmittedFile {
 
 	sort.Strings(sourceObjects)
 	sourceObjects = dedup(sourceObjects)
+
+	// If neither hooks nor permissions exist, nothing to emit.
+	if len(hooksMap) == 0 && permissions == nil {
+		return nil
+	}
 
 	var files []pipeline.EmittedFile
 
@@ -104,8 +101,12 @@ func renderHooks(hooks []pipeline.LoweredObject) []pipeline.EmittedFile {
 		})
 	}
 
-	compatSettings := settingsJSON{
-		Hooks: compatMap,
+	compatSettings := settingsJSON{}
+	if len(compatMap) > 0 {
+		compatSettings.Hooks = compatMap
+	}
+	if permissions != nil {
+		compatSettings.Permissions = permissions
 	}
 
 	compatData, err := json.MarshalIndent(compatSettings, "", "  ")
@@ -120,6 +121,41 @@ func renderHooks(hooks []pipeline.LoweredObject) []pipeline.EmittedFile {
 	}
 
 	return files
+}
+
+// collectPermissions aggregates tool expressions from agents and skills into
+// a permissions struct. Returns nil if no tool expressions are present.
+func collectPermissions(agents, skills []pipeline.LoweredObject) *permissionsJSON {
+	allowSet := make(map[string]bool)
+	denySet := make(map[string]bool)
+
+	for _, obj := range append(agents, skills...) {
+		if tools := getFieldStringSlice(obj, "tools"); len(tools) > 0 {
+			for _, t := range tools {
+				allowSet[t] = true
+			}
+		}
+		if denied := getFieldStringSlice(obj, "disallowedTools"); len(denied) > 0 {
+			for _, t := range denied {
+				denySet[t] = true
+			}
+		}
+	}
+
+	if len(allowSet) == 0 && len(denySet) == 0 {
+		return nil
+	}
+
+	perms := &permissionsJSON{}
+	for t := range allowSet {
+		perms.Allow = append(perms.Allow, t)
+	}
+	for t := range denySet {
+		perms.Deny = append(perms.Deny, t)
+	}
+	sort.Strings(perms.Allow)
+	sort.Strings(perms.Deny)
+	return perms
 }
 
 // hookEntry is a single hook entry in .github/hooks/{event}.json.
@@ -138,7 +174,14 @@ type compatHookEntry struct {
 
 // settingsJSON is the structure of .claude/settings.json.
 type settingsJSON struct {
-	Hooks map[string][]compatHookEntry `json:"hooks"`
+	Hooks       map[string][]compatHookEntry `json:"hooks,omitempty"`
+	Permissions *permissionsJSON             `json:"permissions,omitempty"`
+}
+
+// permissionsJSON holds tool permission entries for settings.json.
+type permissionsJSON struct {
+	Allow []string `json:"allow,omitempty"`
+	Deny  []string `json:"deny,omitempty"`
 }
 
 // hookEvent extracts the event name from a hook's Fields.

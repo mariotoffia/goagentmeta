@@ -33,9 +33,14 @@
         "hints": { "type": "array", "items": { "type": "string" } }
       }
     },
-    "allowedTools": {
+    "tools": {
       "type": "array",
-      "description": "Tool permission expressions",
+      "description": "Allowed tool permission expressions",
+      "items": { "type": "string" }
+    },
+    "disallowedTools": {
+      "type": "array",
+      "description": "Denied tool permission expressions",
       "items": { "type": "string" }
     },
     "compatibility": {

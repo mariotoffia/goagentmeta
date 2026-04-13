@@ -6,5 +6,10 @@
         "command": "make lint"
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Read"
+    ]
   }
 }

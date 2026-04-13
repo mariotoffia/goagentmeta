@@ -204,7 +204,7 @@ activation:
     - charge
     - refund
 
-allowedTools:
+tools:
   - Read
   - Write
   - Edit

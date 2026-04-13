@@ -19,7 +19,7 @@ func TestParser_MarkdownFrontmatter(t *testing.T) {
 id: my-skill
 kind: skill
 description: A test skill
-allowedTools:
+tools:
   - Read
   - "Bash(go:*)"
 ---
@@ -53,12 +53,12 @@ It can have multiple paragraphs.
 	}
 
 	// Check raw fields
-	tools, ok := obj.RawFields["allowedTools"].([]any)
+	tools, ok := obj.RawFields["tools"].([]any)
 	if !ok {
-		t.Fatal("expected allowedTools in RawFields")
+		t.Fatal("expected tools in RawFields")
 	}
 	if len(tools) != 2 {
-		t.Errorf("expected 2 allowedTools, got %d", len(tools))
+		t.Errorf("expected 2 tools, got %d", len(tools))
 	}
 }
 
@@ -122,9 +122,11 @@ Always use gofmt. Prefer short variable names.
 id: reviewer
 kind: agent
 description: Code reviewer agent
-toolPolicy:
-  filesystem.read: allow
-  terminal.exec: deny
+tools:
+  - Read
+  - Grep
+disallowedTools:
+  - Write
 ---
 
 You are a meticulous code reviewer. Focus on correctness and security.

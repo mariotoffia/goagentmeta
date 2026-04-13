@@ -7,15 +7,47 @@ import (
 	"github.com/mariotoffia/goagentmeta/internal/domain/pipeline"
 )
 
-// renderHooks generates .claude/settings.json containing the hooks section.
+// renderSettings generates .claude/settings.json containing hooks and permissions.
 // Hooks are grouped by Event → []{type, command, matcher} as per Claude Code's
-// hooks convention.
-func renderHooks(hooks []pipeline.LoweredObject) []pipeline.EmittedFile {
-	if len(hooks) == 0 {
+// hooks convention. Permissions aggregate tool expressions from agents and skills.
+func renderSettings(hooks []pipeline.LoweredObject, permissions *permissionsJSON) []pipeline.EmittedFile {
+	hooksMap, sourceObjects := buildHooksMap(hooks)
+
+	// If neither hooks nor permissions exist, nothing to emit.
+	if len(hooksMap) == 0 && permissions == nil {
 		return nil
 	}
 
-	// Build the hooks map: event → []hookEntry.
+	settings := settingsJSON{}
+
+	if len(hooksMap) > 0 {
+		settings.Hooks = hooksMap
+	}
+	if permissions != nil {
+		settings.Permissions = permissions
+	}
+
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return nil
+	}
+
+	data = append(data, '\n')
+
+	sort.Strings(sourceObjects)
+
+	return []pipeline.EmittedFile{
+		{
+			Path:          ".claude/settings.json",
+			Content:       data,
+			Layer:         pipeline.LayerExtension,
+			SourceObjects: sourceObjects,
+		},
+	}
+}
+
+// buildHooksMap converts hook objects into a map of event → []hookEntry.
+func buildHooksMap(hooks []pipeline.LoweredObject) (map[string][]hookEntry, []string) {
 	hooksMap := make(map[string][]hookEntry)
 	var sourceObjects []string
 
@@ -38,10 +70,6 @@ func renderHooks(hooks []pipeline.LoweredObject) []pipeline.EmittedFile {
 		sourceObjects = append(sourceObjects, hook.OriginalID)
 	}
 
-	if len(hooksMap) == 0 {
-		return nil
-	}
-
 	// Sort entries within each event group for determinism.
 	for event := range hooksMap {
 		entries := hooksMap[event]
@@ -53,34 +81,54 @@ func renderHooks(hooks []pipeline.LoweredObject) []pipeline.EmittedFile {
 		})
 	}
 
-	// Build settings.json structure.
-	settings := settingsJSON{
-		Hooks: hooksMap,
+	return hooksMap, sourceObjects
+}
+
+// collectPermissions aggregates tool expressions from agents and skills into
+// a permissions struct. Returns nil if no tool expressions are present.
+func collectPermissions(agents, skills []pipeline.LoweredObject) *permissionsJSON {
+	allowSet := make(map[string]bool)
+	denySet := make(map[string]bool)
+
+	for _, obj := range append(agents, skills...) {
+		if tools := getFieldStringSlice(obj, "tools"); len(tools) > 0 {
+			for _, t := range tools {
+				allowSet[t] = true
+			}
+		}
+		if denied := getFieldStringSlice(obj, "disallowedTools"); len(denied) > 0 {
+			for _, t := range denied {
+				denySet[t] = true
+			}
+		}
 	}
 
-	data, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
+	if len(allowSet) == 0 && len(denySet) == 0 {
 		return nil
 	}
 
-	// Ensure trailing newline.
-	data = append(data, '\n')
-
-	sort.Strings(sourceObjects)
-
-	return []pipeline.EmittedFile{
-		{
-			Path:          ".claude/settings.json",
-			Content:       data,
-			Layer:         pipeline.LayerExtension,
-			SourceObjects: sourceObjects,
-		},
+	perms := &permissionsJSON{}
+	for t := range allowSet {
+		perms.Allow = append(perms.Allow, t)
 	}
+	for t := range denySet {
+		perms.Deny = append(perms.Deny, t)
+	}
+	sort.Strings(perms.Allow)
+	sort.Strings(perms.Deny)
+	return perms
 }
 
 // settingsJSON is the structure of .claude/settings.json.
 type settingsJSON struct {
-	Hooks map[string][]hookEntry `json:"hooks"`
+	Hooks       map[string][]hookEntry `json:"hooks,omitempty"`
+	Permissions *permissionsJSON       `json:"permissions,omitempty"`
+}
+
+// permissionsJSON holds tool permission entries for settings.json.
+type permissionsJSON struct {
+	Allow []string `json:"allow,omitempty"`
+	Deny  []string `json:"deny,omitempty"`
 }
 
 // hookEntry is a single hook entry in settings.json.

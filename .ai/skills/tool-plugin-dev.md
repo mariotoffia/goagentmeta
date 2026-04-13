@@ -14,8 +14,8 @@ activation:
     - new tool
     - tool expression
     - tool validation
-    - allowedTools
-allowedTools:
+    - tools
+tools:
   - Read
   - Write
   - Edit
@@ -29,7 +29,7 @@ appliesTo:
 
 # Creating a New Tool Plugin
 
-Tool plugins validate tool expressions used in `allowedTools` and `toolPolicy` fields.
+Tool plugins validate tool expressions used in `tools` and `disallowedTools` fields.
 
 ## Tool Expression Forms
 

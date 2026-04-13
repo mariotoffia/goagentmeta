@@ -220,7 +220,7 @@ Objects that have a body (instruction, rule, skill, agent) are authored as **Mar
 id: my-skill
 kind: skill
 description: Example skill
-allowedTools:
+tools:
   - Read
   - "Bash(go:*)"
 ---
@@ -247,7 +247,7 @@ The parser stage (`PhaseParse`) reads both `.md` and `.yaml` files. For body-car
 
 ## Tool Plugin System
 
-Tool expressions (`Skill.allowedTools`, `Agent.toolPolicy`) are validated by a pluggable **tool plugin registry**. Each plugin declares a keyword, optional syntax grammar, and validation logic.
+Tool expressions (`Skill.tools`, `Agent.tools`) are validated by a pluggable **tool plugin registry**. Each plugin declares a keyword, optional syntax grammar, and validation logic.
 
 ```
 ┌─────────────────────────────────────────────────────┐

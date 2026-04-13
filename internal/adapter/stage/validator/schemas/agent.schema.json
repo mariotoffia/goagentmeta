@@ -29,9 +29,15 @@
         }
       }
     },
-    "toolPolicy": {
-      "type": "object",
-      "description": "Tool access decisions keyed by capability/tool name"
+    "tools": {
+      "type": "array",
+      "description": "Allowed tool permission expressions",
+      "items": { "type": "string" }
+    },
+    "disallowedTools": {
+      "type": "array",
+      "description": "Denied tool permission expressions",
+      "items": { "type": "string" }
     },
     "delegation": {
       "type": "object",

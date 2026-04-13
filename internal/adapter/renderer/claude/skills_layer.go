@@ -49,10 +49,18 @@ func renderSkills(
 			content.WriteString("user_invocable: true\n")
 		}
 
-		// Allowed tools (Claude-specific).
-		if tools := getFieldStringSlice(skill, "allowedTools"); len(tools) > 0 {
+		// Allowed tools.
+		if tools := getFieldStringSlice(skill, "tools"); len(tools) > 0 {
 			content.WriteString("allowed-tools:\n")
 			for _, t := range tools {
+				content.WriteString(fmt.Sprintf("  - %s\n", yamlScalar(t)))
+			}
+		}
+
+		// Disallowed tools.
+		if denied := getFieldStringSlice(skill, "disallowedTools"); len(denied) > 0 {
+			content.WriteString("disallowed-tools:\n")
+			for _, t := range denied {
 				content.WriteString(fmt.Sprintf("  - %s\n", yamlScalar(t)))
 			}
 		}

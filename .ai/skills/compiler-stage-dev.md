@@ -17,7 +17,7 @@ activation:
     - pipeline stage
     - compiler plugin
     - stage implementation
-allowedTools:
+tools:
   - Read
   - Write
   - Edit

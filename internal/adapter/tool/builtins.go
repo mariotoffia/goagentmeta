@@ -7,7 +7,7 @@
 //
 // Each plugin also declares:
 //   - Which targets support it (empty = all targets)
-//   - Which capabilities it relates to (for toolPolicy cross-referencing)
+//   - Which capabilities it relates to (for tools/disallowedTools cross-referencing)
 package tool
 
 import (
@@ -26,8 +26,8 @@ func NewDefaultRegistry() *tool.Registry {
 		r.MustRegister(p)
 	}
 
-	// Register standard capability IDs that can appear in toolPolicy
-	// but are not direct tool keywords.
+	// Register standard capability IDs that can appear in tools or
+	// disallowedTools but are not direct tool keywords.
 	for _, cap := range standardCapabilityIDs() {
 		r.RegisterCapabilityID(cap)
 	}
@@ -36,7 +36,7 @@ func NewDefaultRegistry() *tool.Registry {
 }
 
 // standardCapabilityIDs returns all known capability IDs from the
-// capability domain. These may appear as toolPolicy keys.
+// capability domain. These may appear in tools or disallowedTools lists.
 func standardCapabilityIDs() []string {
 	return []string{
 		// Filesystem

@@ -13,7 +13,7 @@ import (
 // inheritance, and circular delegation. It also validates tool expressions
 // when a ToolPluginRegistry is configured.
 type SemanticValidator struct {
-	// toolRegistry validates tool expressions in allowedTools and toolPolicy.
+	// toolRegistry validates tool expressions in tools and disallowedTools.
 	// May be nil, in which case tool validation is skipped.
 	toolRegistry *tool.Registry
 }
@@ -384,8 +384,8 @@ func (v *SemanticValidator) extractHandoffAgentRefs(fields map[string]any) []str
 	return refs
 }
 
-// checkToolExpressions validates tool expressions in allowedTools (skills)
-// and toolPolicy keys (agents) against the registered tool plugins.
+// checkToolExpressions validates tool expressions in tools and disallowedTools
+// fields for both skills and agents against the registered tool plugins.
 func (v *SemanticValidator) checkToolExpressions(tree pipeline.SourceTree) []pipeline.Diagnostic {
 	if v.toolRegistry == nil {
 		return nil
@@ -395,55 +395,58 @@ func (v *SemanticValidator) checkToolExpressions(tree pipeline.SourceTree) []pip
 	for _, obj := range tree.Objects {
 		switch obj.Meta.Kind {
 		case model.KindSkill:
-			diags = append(diags, v.validateAllowedTools(obj)...)
+			diags = append(diags, v.validateTools(obj)...)
 			diags = append(diags, v.validateBashBinaryDeps(obj)...)
 		case model.KindAgent:
-			diags = append(diags, v.validateToolPolicy(obj)...)
+			diags = append(diags, v.validateTools(obj)...)
 		}
 	}
 	return diags
 }
 
-// validateAllowedTools checks the allowedTools field of a skill.
-func (v *SemanticValidator) validateAllowedTools(obj pipeline.RawObject) []pipeline.Diagnostic {
-	tools, ok := obj.RawFields["allowedTools"]
-	if !ok {
-		return nil
-	}
-	arr, ok := tools.([]any)
-	if !ok {
-		return nil
-	}
-
+// validateTools checks the tools and disallowedTools fields of a skill or agent.
+func (v *SemanticValidator) validateTools(obj pipeline.RawObject) []pipeline.Diagnostic {
 	var diags []pipeline.Diagnostic
-	for _, item := range arr {
-		expr, ok := item.(string)
+
+	for _, fieldName := range []string{"tools", "disallowedTools"} {
+		raw, ok := obj.RawFields[fieldName]
 		if !ok {
 			continue
 		}
-		if err := v.toolRegistry.ValidateExpression(expr); err != nil {
-			severity := "warning"
-			if _, isUnknown := err.(*tool.UnknownToolError); !isUnknown {
-				severity = "error" // syntax errors are errors; unknown tools are warnings
+		arr, ok := raw.([]any)
+		if !ok {
+			continue
+		}
+		for _, item := range arr {
+			expr, ok := item.(string)
+			if !ok {
+				continue
 			}
-			diags = append(diags, pipeline.Diagnostic{
-				Severity:   severity,
-				Code:       string(pipeline.ErrValidation),
-				Message:    fmt.Sprintf("allowedTools: tool expression %q: %v", expr, err),
-				SourcePath: obj.SourcePath,
-				ObjectID:   obj.Meta.ID,
-				Phase:      pipeline.PhaseValidate,
-			})
+			if err := v.toolRegistry.ValidateExpression(expr); err != nil {
+				severity := "warning"
+				if _, isUnknown := err.(*tool.UnknownToolError); !isUnknown {
+					severity = "error"
+				}
+				diags = append(diags, pipeline.Diagnostic{
+					Severity:   severity,
+					Code:       string(pipeline.ErrValidation),
+					Message:    fmt.Sprintf("%s: tool expression %q: %v", fieldName, expr, err),
+					SourcePath: obj.SourcePath,
+					ObjectID:   obj.Meta.ID,
+					Phase:      pipeline.PhaseValidate,
+				})
+			}
 		}
 	}
+
 	return diags
 }
 
 // validateBashBinaryDeps cross-validates Bash(<command>:*) entries in
-// allowedTools against the binaryDeps list. If a skill declares
+// tools against the binaryDeps list. If a skill declares
 // Bash(go:*) but "go" is not in binaryDeps, emit a warning.
 func (v *SemanticValidator) validateBashBinaryDeps(obj pipeline.RawObject) []pipeline.Diagnostic {
-	tools, ok := obj.RawFields["allowedTools"]
+	tools, ok := obj.RawFields["tools"]
 	if !ok {
 		return nil
 	}
@@ -452,7 +455,7 @@ func (v *SemanticValidator) validateBashBinaryDeps(obj pipeline.RawObject) []pip
 		return nil
 	}
 
-	// Collect Bash command names from allowedTools.
+	// Collect Bash command names from tools.
 	var bashCmds []string
 	for _, item := range arr {
 		expr, ok := item.(string)
@@ -491,7 +494,7 @@ func (v *SemanticValidator) validateBashBinaryDeps(obj pipeline.RawObject) []pip
 			diags = append(diags, pipeline.Diagnostic{
 				Severity:   "warning",
 				Code:       string(pipeline.ErrValidation),
-				Message:    fmt.Sprintf("allowedTools includes Bash(%s:*) but %q is not listed in binaryDeps", cmd, cmd),
+				Message:    fmt.Sprintf("tools includes Bash(%s:*) but %q is not listed in binaryDeps", cmd, cmd),
 				SourcePath: obj.SourcePath,
 				ObjectID:   obj.Meta.ID,
 				Phase:      pipeline.PhaseValidate,
@@ -538,58 +541,4 @@ func extractStringSlice(fields map[string]any, key string) []string {
 	return result
 }
 
-// validateToolPolicy checks the toolPolicy keys of an agent.
-func (v *SemanticValidator) validateToolPolicy(obj pipeline.RawObject) []pipeline.Diagnostic {
-	policy, ok := obj.RawFields["toolPolicy"]
-	if !ok {
-		return nil
-	}
-	policyMap, ok := policy.(map[string]any)
-	if !ok {
-		return nil
-	}
 
-	var diags []pipeline.Diagnostic
-	for key, val := range policyMap {
-		// Validate the tool/capability key.
-		if err := v.toolRegistry.ValidateExpression(key); err != nil {
-			// Unknown tool that isn't a capability ID is worth warning about.
-			diags = append(diags, pipeline.Diagnostic{
-				Severity:   "warning",
-				Code:       string(pipeline.ErrValidation),
-				Message:    fmt.Sprintf("toolPolicy: key %q: %v", key, err),
-				SourcePath: obj.SourcePath,
-				ObjectID:   obj.Meta.ID,
-				Phase:      pipeline.PhaseValidate,
-			})
-		}
-
-		// Validate the decision value.
-		decision, ok := val.(string)
-		if !ok {
-			diags = append(diags, pipeline.Diagnostic{
-				Severity:   "error",
-				Code:       string(pipeline.ErrValidation),
-				Message:    fmt.Sprintf("toolPolicy: value for %q must be a string", key),
-				SourcePath: obj.SourcePath,
-				ObjectID:   obj.Meta.ID,
-				Phase:      pipeline.PhaseValidate,
-			})
-			continue
-		}
-		switch decision {
-		case "allow", "deny", "ask":
-			// valid
-		default:
-			diags = append(diags, pipeline.Diagnostic{
-				Severity:   "error",
-				Code:       string(pipeline.ErrValidation),
-				Message:    fmt.Sprintf("toolPolicy: invalid decision %q for %q (must be allow, deny, or ask)", decision, key),
-				SourcePath: obj.SourcePath,
-				ObjectID:   obj.Meta.ID,
-				Phase:      pipeline.PhaseValidate,
-			})
-		}
-	}
-	return diags
-}

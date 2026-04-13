@@ -80,6 +80,14 @@ func (s *Stage) Execute(ctx context.Context, input any) (any, error) {
 			fields[k] = v
 		}
 
+		// Project Meta fields that the parser strips from RawFields back into
+		// ResolvedFields so renderers can access them via Fields["description"].
+		projectMetaIntoFields(&meta, fields)
+
+		// Flatten nested structures into the flat keys renderers expect
+		// (e.g. activation.hints → activationHints).
+		flattenNestedFields(fields)
+
 		work[raw.Meta.ID] = &pipeline.NormalizedObject{
 			Meta:           meta,
 			SourcePath:     raw.SourcePath,

@@ -1,20 +1,19 @@
 .PHONY: install dep build test test-integration lint vet fmt generate clean check check-all
 
-# Install system dependencies (Go, golangci-lint)
-install:
+# Install/tidy project dependencies
+dep:
 	@echo "Checking Go installation..."
 	@command -v go >/dev/null 2>&1 || { echo "Go is not installed. Install Go 1.25+"; exit 1; }
 	@echo "Installing golangci-lint..."
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 	@echo "Dependencies installed."
-
-# Install/tidy project dependencies
-dep:
-	go mod tidy
+	@go mod tidy
 
 # Build all packages
 build:
 	go build ./...
+install:
+	cd cmd/goagentmeta && go install . && cd -
 
 # Run unit tests (race detection, -short, skips Docker tests)
 test:

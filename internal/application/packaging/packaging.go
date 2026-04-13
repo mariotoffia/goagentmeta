@@ -11,6 +11,7 @@ import (
 	"github.com/mariotoffia/goagentmeta/internal/domain/build"
 	"github.com/mariotoffia/goagentmeta/internal/domain/pipeline"
 	"github.com/mariotoffia/goagentmeta/internal/port/filesystem"
+	"github.com/mariotoffia/goagentmeta/internal/port/packager"
 )
 
 // ErrNotImplemented is returned by packagers that are not yet implemented.
@@ -39,11 +40,23 @@ func WithOutputDir(dir string) Option {
 	}
 }
 
+// WithRegistry sets a custom packager registry. If not set, the service uses
+// the legacy if/else dispatch for backward compatibility.
+func WithRegistry(reg packager.PackagerRegistry) Option {
+	return func(s *PackagingService) {
+		s.registry = reg
+	}
+}
+
 // PackagingService wraps MaterializationResult output into distributable packages.
+// It supports two modes:
+//   - Legacy: if/else dispatch to built-in packagers (backward-compatible)
+//   - Registry: delegates to registered packager.Packager implementations
 type PackagingService struct {
 	fsReader  filesystem.Reader
 	fsWriter  filesystem.Writer
 	outputDir string
+	registry  packager.PackagerRegistry
 }
 
 // NewPackagingService creates a new PackagingService.
@@ -96,6 +109,56 @@ func (s *PackagingService) Package(
 	}
 
 	return &PackagingResult{Artifacts: artifacts}, nil
+}
+
+// PackageWithEmission creates distributable artifacts using the structured
+// emission plan and registered packager.Packager implementations. Each entry
+// in configs maps a packager.Format to a packager-specific config struct.
+// Formats not present in the registry are silently skipped.
+func (s *PackagingService) PackageWithEmission(
+	ctx context.Context,
+	emission pipeline.EmissionPlan,
+	result pipeline.MaterializationResult,
+	configs map[packager.Format]any,
+) (*PackagingResult, error) {
+	if s.registry == nil {
+		return nil, fmt.Errorf("packaging: no packager registry configured; use WithRegistry option")
+	}
+
+	var artifacts []PackagedArtifact
+
+	for format, cfg := range configs {
+		p, ok := s.registry.ByFormat(format)
+		if !ok {
+			continue
+		}
+
+		output, err := p.Package(ctx, packager.PackagerInput{
+			EmissionPlan:          emission,
+			MaterializationResult: result,
+			Config:                cfg,
+			OutputDir:             s.outputDir,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("%s packaging: %w", format, err)
+		}
+
+		for _, a := range output.Artifacts {
+			artifacts = append(artifacts, PackagedArtifact{
+				Type:     string(a.Format),
+				Path:     a.Path,
+				Target:   joinTargets(a.Targets),
+				Metadata: a.Metadata,
+			})
+		}
+	}
+
+	return &PackagingResult{Artifacts: artifacts}, nil
+}
+
+// Registry returns the packager registry, or nil if none is configured.
+func (s *PackagingService) Registry() packager.PackagerRegistry {
+	return s.registry
 }
 
 // groupFilesByTarget partitions materialized file paths by their build target,

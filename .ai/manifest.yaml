@@ -1,0 +1,38 @@
+schemaVersion: 1
+project:
+  name: goagentmeta
+  monorepo: false
+
+build:
+  defaultTargets:
+    - claude
+    - cursor
+    - copilot
+    - codex
+  defaultProfiles:
+    - local-dev
+  outputRoot: .ai-build
+  syncMode: explicit
+
+compilation:
+  hierarchyMode: preserve-when-supported
+  materialization: copy-or-symlink
+  unsupportedMode: fail-on-required
+  provenance: full
+
+preservation:
+  default: preferred
+
+targets:
+  claude:
+    enabled: true
+  cursor:
+    enabled: true
+  copilot:
+    enabled: true
+  codex:
+    enabled: true
+
+profiles:
+  local-dev: profiles/local-dev.yaml
+  ci: profiles/ci.yaml

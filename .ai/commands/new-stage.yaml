@@ -1,0 +1,12 @@
+id: new-stage
+kind: command
+version: 1
+description: Scaffold a new pipeline stage with descriptor, execute method, tests, and wire registration
+
+action:
+  type: skill
+  ref: compiler-stage-dev
+
+appliesTo:
+  targets: ["*"]
+  profiles: ["*"]

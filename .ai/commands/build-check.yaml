@@ -1,0 +1,12 @@
+id: build-check
+kind: command
+version: 1
+description: Run the full build check — build, lint, vet, and unit tests
+
+action:
+  type: script
+  ref: scripts/commands/build-check.sh
+
+appliesTo:
+  targets: ["*"]
+  profiles: ["*"]

@@ -1,0 +1,14 @@
+id: filesystem.read
+kind: capability
+version: 1
+description: Read files and list directories in the project workspace
+
+contract:
+  category: filesystem
+  description: >
+    Read access to project files. Required by skills and agents that need
+    to inspect source code, configuration files, and build output.
+
+security:
+  filesystem:
+    - read

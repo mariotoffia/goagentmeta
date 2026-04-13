@@ -1,0 +1,29 @@
+id: pre-commit-check
+kind: hook
+version: 1
+description: Run make check before committing to catch build, lint, and test failures
+preservation: preferred
+
+event: pre-commit
+
+action:
+  type: script
+  ref: scripts/hooks/pre-commit.sh
+
+effect:
+  class: validating
+  enforcement: blocking
+
+inputs:
+  include:
+    - changedFiles
+    - workingDirectory
+
+policy:
+  timeoutSeconds: 300
+  maxRetries: 0
+  failurePolicy: fail-build
+
+appliesTo:
+  targets: ["*"]
+  profiles: ["*"]

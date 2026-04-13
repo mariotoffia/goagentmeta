@@ -1,0 +1,15 @@
+id: terminal.exec
+kind: capability
+version: 1
+description: Execute shell commands (build tools, test runners, linters)
+
+contract:
+  category: tool
+  description: >
+    Execute terminal commands. Required by skills and agents that run
+    make targets, go commands, and other build/test tooling.
+
+security:
+  filesystem:
+    - read
+    - write

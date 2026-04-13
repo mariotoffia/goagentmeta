@@ -1,0 +1,14 @@
+id: repo.search
+kind: capability
+version: 1
+description: Search repository content — file names, code patterns, symbols
+
+contract:
+  category: repo
+  description: >
+    Search project files by name patterns and content. Required by agents
+    that need to find code, trace dependencies, or locate definitions.
+
+security:
+  filesystem:
+    - read

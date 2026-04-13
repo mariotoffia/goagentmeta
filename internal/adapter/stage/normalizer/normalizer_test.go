@@ -1079,3 +1079,388 @@ func TestInheritance_TargetOverridesMerged(t *testing.T) {
 		t.Errorf("Syntax[format] = %q, want xml", override.Syntax["format"])
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Field Projection — integration tests through the normalizer pipeline
+// ---------------------------------------------------------------------------
+
+func TestFieldProjection_DescriptionFromMeta(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("my-skill", model.KindSkill,
+			withDescription("Skill that does X"),
+			withContent("Use this skill when..."),
+			withRawField("tools", []any{"Read", "Write"}),
+		),
+	))
+
+	obj := graph.Objects["my-skill"]
+	desc, ok := obj.ResolvedFields["description"].(string)
+	if !ok || desc != "Skill that does X" {
+		t.Errorf("ResolvedFields[description] = %q, want %q", desc, "Skill that does X")
+	}
+}
+
+func TestFieldProjection_DescriptionForAllKinds(t *testing.T) {
+	kinds := []struct {
+		kind model.Kind
+		id   string
+	}{
+		{model.KindInstruction, "inst"},
+		{model.KindRule, "rule"},
+		{model.KindSkill, "skill"},
+		{model.KindAgent, "agent"},
+		{model.KindHook, "hook"},
+		{model.KindCommand, "cmd"},
+	}
+
+	for _, tc := range kinds {
+		t.Run(string(tc.kind), func(t *testing.T) {
+			graph := execute(t, sourceTree(
+				rawObj(tc.id, tc.kind,
+					withDescription("desc for "+tc.id),
+					withContent("body"),
+				),
+			))
+
+			obj := graph.Objects[tc.id]
+			got, ok := obj.ResolvedFields["description"].(string)
+			if !ok || got != "desc for "+tc.id {
+				t.Errorf("ResolvedFields[description] = %q, want %q", got, "desc for "+tc.id)
+			}
+		})
+	}
+}
+
+func TestFieldProjection_EmptyDescriptionNotProjected(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("my-skill", model.KindSkill,
+			withContent("body"),
+		),
+	))
+
+	obj := graph.Objects["my-skill"]
+	if _, exists := obj.ResolvedFields["description"]; exists {
+		t.Error("empty description should not be projected into ResolvedFields")
+	}
+}
+
+func TestFieldProjection_RawFieldDescriptionNotOverridden(t *testing.T) {
+	// If someone puts description in both Meta AND RawFields (unusual but
+	// possible if the parser changes), the RawFields version takes precedence.
+	graph := execute(t, sourceTree(
+		rawObj("my-skill", model.KindSkill,
+			withDescription("meta version"),
+			withRawField("description", "raw version"),
+			withContent("body"),
+		),
+	))
+
+	obj := graph.Objects["my-skill"]
+	got := obj.ResolvedFields["description"].(string)
+	if got != "raw version" {
+		t.Errorf("ResolvedFields[description] = %q, want %q (raw should take precedence)", got, "raw version")
+	}
+}
+
+func TestFieldProjection_ActivationHintsFlattened(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("my-skill", model.KindSkill,
+			withContent("body"),
+			withRawField("activation", map[string]any{
+				"hints": []any{"do X", "do Y"},
+			}),
+		),
+	))
+
+	obj := graph.Objects["my-skill"]
+	hints, ok := obj.ResolvedFields["activationHints"].([]any)
+	if !ok {
+		t.Fatalf("ResolvedFields[activationHints] type = %T, want []any", obj.ResolvedFields["activationHints"])
+	}
+	if len(hints) != 2 {
+		t.Fatalf("activationHints len = %d, want 2", len(hints))
+	}
+	if hints[0] != "do X" || hints[1] != "do Y" {
+		t.Errorf("activationHints = %v, want [do X, do Y]", hints)
+	}
+}
+
+func TestFieldProjection_NoActivation_NoActivationHints(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("my-skill", model.KindSkill,
+			withContent("body"),
+		),
+	))
+
+	obj := graph.Objects["my-skill"]
+	if _, exists := obj.ResolvedFields["activationHints"]; exists {
+		t.Error("activationHints should not exist when activation is absent")
+	}
+}
+
+func TestFieldProjection_ActivationWithoutHints_NoActivationHints(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("my-skill", model.KindSkill,
+			withContent("body"),
+			withRawField("activation", map[string]any{
+				"triggers": []string{"keyword"},
+			}),
+		),
+	))
+
+	obj := graph.Objects["my-skill"]
+	if _, exists := obj.ResolvedFields["activationHints"]; exists {
+		t.Error("activationHints should not exist when activation.hints is absent")
+	}
+}
+
+func TestFieldProjection_ExistingActivationHintsNotOverridden(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("my-skill", model.KindSkill,
+			withContent("body"),
+			withRawField("activationHints", []any{"explicit"}),
+			withRawField("activation", map[string]any{
+				"hints": []any{"nested"},
+			}),
+		),
+	))
+
+	obj := graph.Objects["my-skill"]
+	hints := obj.ResolvedFields["activationHints"].([]any)
+	if len(hints) != 1 || hints[0] != "explicit" {
+		t.Errorf("activationHints = %v, want [explicit] (should not override)", hints)
+	}
+}
+
+func TestFieldProjection_DescriptionAndHintsTogether(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("full-skill", model.KindSkill,
+			withDescription("Complete skill for testing"),
+			withContent("Detailed instructions..."),
+			withRawField("tools", []any{"Read", "Write", "Bash(go:*)"}),
+			withRawField("activation", map[string]any{
+				"hints": []any{"test this", "check that"},
+			}),
+		),
+	))
+
+	obj := graph.Objects["full-skill"]
+
+	desc := obj.ResolvedFields["description"].(string)
+	if desc != "Complete skill for testing" {
+		t.Errorf("description = %q", desc)
+	}
+
+	hints := obj.ResolvedFields["activationHints"].([]any)
+	if len(hints) != 2 {
+		t.Errorf("activationHints len = %d, want 2", len(hints))
+	}
+
+	tools := obj.ResolvedFields["tools"].([]any)
+	if len(tools) != 3 {
+		t.Errorf("tools len = %d, want 3", len(tools))
+	}
+}
+
+func TestFieldProjection_PreservesAllFields(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("agent-x", model.KindAgent,
+			withDescription("Agent X"),
+			withContent("Agent body"),
+			withRawField("tools", []any{"Read", "Grep"}),
+			withRawField("disallowedTools", []any{"Write"}),
+			withRawField("skills", []any{"skill-a"}),
+			withRawField("delegation", map[string]any{
+				"mayCall": []any{"other-agent"},
+			}),
+			withRawField("model", "claude-4"),
+		),
+	))
+
+	obj := graph.Objects["agent-x"]
+
+	checks := map[string]any{
+		"description":     "Agent X",
+		"model":           "claude-4",
+	}
+	for key, want := range checks {
+		got, ok := obj.ResolvedFields[key].(string)
+		if !ok || got != want {
+			t.Errorf("ResolvedFields[%q] = %v, want %q", key, obj.ResolvedFields[key], want)
+		}
+	}
+
+	sliceChecks := map[string]int{
+		"tools":          2,
+		"disallowedTools": 1,
+		"skills":         1,
+	}
+	for key, wantLen := range sliceChecks {
+		val := obj.ResolvedFields[key]
+		switch v := val.(type) {
+		case []any:
+			if len(v) != wantLen {
+				t.Errorf("ResolvedFields[%q] len = %d, want %d", key, len(v), wantLen)
+			}
+		case []string:
+			if len(v) != wantLen {
+				t.Errorf("ResolvedFields[%q] len = %d, want %d", key, len(v), wantLen)
+			}
+		default:
+			t.Errorf("ResolvedFields[%q] type = %T, want slice", key, val)
+		}
+	}
+
+	del, ok := obj.ResolvedFields["delegation"].(map[string]any)
+	if !ok {
+		t.Fatal("delegation should be a map")
+	}
+	if del["mayCall"] == nil {
+		t.Error("delegation.mayCall missing")
+	}
+}
+
+func TestFieldProjection_MultipleObjects(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("skill-a", model.KindSkill,
+			withDescription("Skill A"),
+			withContent("body A"),
+			withRawField("activation", map[string]any{
+				"hints": []any{"alpha"},
+			}),
+		),
+		rawObj("skill-b", model.KindSkill,
+			withDescription("Skill B"),
+			withContent("body B"),
+		),
+		rawObj("agent-c", model.KindAgent,
+			withDescription("Agent C"),
+			withContent("body C"),
+			withRawField("tools", []any{"Read"}),
+		),
+		rawObj("inst-d", model.KindInstruction,
+			withContent("instruction body"),
+		),
+	))
+
+	// skill-a: description + activationHints
+	a := graph.Objects["skill-a"]
+	if a.ResolvedFields["description"] != "Skill A" {
+		t.Error("skill-a description missing")
+	}
+	if _, ok := a.ResolvedFields["activationHints"]; !ok {
+		t.Error("skill-a activationHints missing")
+	}
+
+	// skill-b: description, no activationHints
+	b := graph.Objects["skill-b"]
+	if b.ResolvedFields["description"] != "Skill B" {
+		t.Error("skill-b description missing")
+	}
+	if _, ok := b.ResolvedFields["activationHints"]; ok {
+		t.Error("skill-b should not have activationHints")
+	}
+
+	// agent-c: description, tools
+	c := graph.Objects["agent-c"]
+	if c.ResolvedFields["description"] != "Agent C" {
+		t.Error("agent-c description missing")
+	}
+
+	// inst-d: no description (empty Meta.Description)
+	d := graph.Objects["inst-d"]
+	if _, exists := d.ResolvedFields["description"]; exists {
+		t.Error("inst-d should not have description (empty)")
+	}
+}
+
+func TestFieldProjection_InheritancePreservesProjection(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("parent", model.KindSkill,
+			withDescription("Parent desc"),
+			withContent("parent body"),
+			withRawField("tools", []any{"Read"}),
+			withRawField("activation", map[string]any{
+				"hints": []any{"parent-hint"},
+			}),
+		),
+		rawObj("child", model.KindSkill,
+			withDescription("Child desc"),
+			withExtends("parent"),
+			withContent("child body"),
+		),
+	))
+
+	child := graph.Objects["child"]
+
+	// Child has own description.
+	if child.ResolvedFields["description"] != "Child desc" {
+		t.Errorf("child description = %v, want %q", child.ResolvedFields["description"], "Child desc")
+	}
+
+	// Child inherits tools from parent.
+	tools := child.ResolvedFields["tools"]
+	if tools == nil {
+		t.Error("child should inherit tools from parent")
+	}
+
+	// Child inherits activation.hints from parent → flattened.
+	if _, ok := child.ResolvedFields["activationHints"]; !ok {
+		t.Error("child should inherit activationHints from parent (via activation.hints)")
+	}
+}
+
+func TestFieldProjection_InheritanceChildOverridesParent(t *testing.T) {
+	graph := execute(t, sourceTree(
+		rawObj("parent", model.KindSkill,
+			withDescription("Parent desc"),
+			withContent("parent body"),
+			withRawField("activation", map[string]any{
+				"hints": []any{"parent-hint"},
+			}),
+		),
+		rawObj("child", model.KindSkill,
+			withDescription("Child desc"),
+			withExtends("parent"),
+			withContent("child body"),
+			withRawField("activation", map[string]any{
+				"hints": []any{"child-hint-a", "child-hint-b"},
+			}),
+		),
+	))
+
+	child := graph.Objects["child"]
+
+	hints := child.ResolvedFields["activationHints"].([]any)
+	// Child's activation should take precedence over parent.
+	if len(hints) != 2 {
+		t.Errorf("child activationHints len = %d, want 2 (child overrides parent)", len(hints))
+	}
+}
+
+func TestFieldProjection_DescriptionPreservedAcrossDiagnosticContext(t *testing.T) {
+	// Ensure field projection works when running through the full
+	// CompilerContext (diagnostic emissions, etc.)
+	cc := &compiler.CompilerContext{
+		Config: &compiler.PipelineConfig{},
+		Report: &pipeline.BuildReport{},
+	}
+	ctx := compiler.ContextWithCompiler(context.Background(), cc)
+
+	stage := normalizer.New(nil)
+	result, err := stage.Execute(ctx, sourceTree(
+		rawObj("diag-skill", model.KindSkill,
+			withDescription("Description with diagnostics"),
+			withContent("body"),
+		),
+	))
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	graph := result.(pipeline.SemanticGraph)
+	obj := graph.Objects["diag-skill"]
+	if obj.ResolvedFields["description"] != "Description with diagnostics" {
+		t.Errorf("description = %v", obj.ResolvedFields["description"])
+	}
+}

@@ -1,0 +1,9 @@
+id: go-benchmark-testing
+kind: plugin
+version: 1
+description: Automates benchmark test creation for Go projects using standard testing package
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/go-benchmark-testing
+  version: latest

@@ -1,0 +1,78 @@
+# JSON Schema (expressed as YAML) for kind: hook
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://goagentmeta.dev/schema/hook.yaml"
+title: Hook
+description: Deterministic lifecycle automation triggered by defined events
+type: object
+
+required: [id, kind, version, description, event, action]
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+
+  kind:
+    type: string
+    const: hook
+
+  version:
+    type: integer
+    minimum: 1
+
+  description:
+    type: string
+    minLength: 1
+
+  preservation:
+    type: string
+    enum: [required, preferred, optional]
+    default: preferred
+
+  event:
+    type: string
+    enum: [pre-commit, post-commit, pre-push, post-push, pre-build, post-build]
+
+  action:
+    type: object
+    required: [type, ref]
+    properties:
+      type:
+        type: string
+        enum: [script, skill]
+      ref:
+        type: string
+        description: Path to script (relative to .ai/) or skill ID
+
+  effect:
+    type: object
+    properties:
+      class:
+        type: string
+        enum: [validating, mutating, informational]
+      enforcement:
+        type: string
+        enum: [blocking, advisory]
+
+  inputs:
+    type: object
+    properties:
+      include:
+        type: array
+        items: { type: string }
+
+  policy:
+    type: object
+    properties:
+      timeoutSeconds:
+        type: integer
+        minimum: 1
+      maxRetries:
+        type: integer
+        minimum: 0
+      failurePolicy:
+        type: string
+        enum: [fail-build, warn, ignore]
+
+  appliesTo:
+    $ref: "instruction.yaml#/$defs/AppliesTo"

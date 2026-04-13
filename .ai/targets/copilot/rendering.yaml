@@ -1,0 +1,194 @@
+# Copilot target rendering configuration
+# Produces AGENT.md (root) and .github/copilot-instructions.md
+
+schemaVersion: 1
+target: copilot
+
+# --- Root instruction file (AGENT.md for VS Code) ---
+rootFile:
+  path: AGENT.md
+  description: GitHub Copilot / VS Code agent instructions
+  sections:
+    - heading: "GoAgentMeta - Agent Guidelines"
+      source: instructions/project-context.md
+      render: body
+      headingLevel: 1
+
+    - heading: "Architecture & Design Principles"
+      source: instructions/architecture.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Technology Stack"
+      source: instructions/project-context.md
+      render: extract
+      extractSection: "Technology"
+      headingLevel: 2
+
+    - heading: "Project Structure"
+      render: static
+      headingLevel: 2
+      content: |
+        ```
+        goagentmeta/
+        ├── cmd/                           # CLI entry points
+        ├── internal/
+        │   ├── domain/                    # Core domain model (innermost ring)
+        │   │   ├── model/                 #   Canonical objects: instruction, rule, skill, agent, etc.
+        │   │   ├── capability/            #   Capability contracts and resolution logic
+        │   │   ├── plugin/                #   Plugin domain (distribution, selection, security)
+        │   │   ├── build/                 #   Build coordinates (target, profile, scope, build unit)
+        │   │   ├── tool/                  #   Tool plugin domain (expression parsing, registry, validation)
+        │   │   └── pipeline/              #   Pipeline IR types, phase definitions, compiler errors
+        │   ├── application/               # Application services (use cases, orchestration)
+        │   │   ├── compiler/              #   Compiler pipeline orchestration and plugin registry
+        │   │   ├── dependency/            #   Dependency resolution use cases
+        │   │   └── (reserved for future packaging use cases)
+        │   ├── port/                      # Port interfaces (driven and driving)
+        │   │   ├── registry/              #   Registry access port
+        │   │   ├── renderer/              #   Target renderer port
+        │   │   ├── filesystem/            #   Filesystem I/O port
+        │   │   ├── reporter/              #   Reporting and provenance port
+        │   │   └── stage/                 #   Pipeline stage port (compiler plugin SPI)
+        │   └── adapter/                   # Infrastructure adapters (outermost ring)
+        │       ├── stage/                 #   Built-in pipeline stage implementations
+        │       │   ├── parser/            #     YAML/Markdown frontmatter parser
+        │       │   ├── validator/         #     Structural + semantic validation
+        │       │   ├── resolver/          #     Dependency resolution
+        │       │   ├── normalizer/        #     Inheritance + merge normalization
+        │       │   ├── planner/           #     Build plan generation
+        │       │   ├── capability/        #     Capability resolution
+        │       │   ├── lowering/          #     IR lowering (safe/unsafe)
+        │       │   ├── materializer/      #     File/symlink materializer
+        │       │   └── reporter/          #     Build report generation
+        │       ├── tool/                  #   Built-in tool plugin registry
+        │       ├── registry/              #   Registry client adapters (HTTP, git, filesystem)
+        │       ├── renderer/              #   Target renderer backends (claude, copilot, codex)
+        │       ├── filesystem/            #   OS filesystem I/O
+        │       ├── reporter/              #   Diagnostic sink, provenance, formatters
+        │       └── cli/                   #   CLI adapter (cobra/flags)
+        ├── pkg/sdk/                       # Public compiler plugin SDK for third-party authors
+        ├── .ai/                           # Canonical source tree (compiler input)
+        │   ├── manifest.yaml              #   Build defaults, targets, profiles, compiler policy
+        │   ├── instructions/              #   Always-on content by scope
+        │   ├── rules/                     #   Conditional or scoped policy
+        │   ├── skills/                    #   Reusable workflow bundles
+        │   ├── agents/                    #   Specialized orchestration definitions
+        │   ├── hooks/                     #   Lifecycle automation definitions
+        │   ├── commands/                  #   User-invoked workflows
+        │   ├── capabilities/              #   Abstract capability contracts
+        │   ├── plugins/                   #   Deployable extension packages
+        │   ├── references/                #   Supplemental knowledge documents
+        │   ├── assets/                    #   Static files (templates, examples, diagrams)
+        │   ├── scripts/                   #   Executable artifacts for hooks/commands
+        │   ├── profiles/                  #   Profile definitions (local-dev, ci, enterprise-locked)
+        │   ├── targets/                   #   Target-specific overrides
+        │   └── schema/                    #   Schema definitions
+        ├── .agents/skills/                # Shared skill library (AgentSkills.io format)
+        ├── docs/architecture/             # Architecture specification documents
+        └── tests/integration/             # End-to-end integration tests
+        ```
+
+    - heading: "Build Commands"
+      render: static
+      headingLevel: 2
+      content: |
+        ```bash
+        make install          # Install system dependencies (Go, golangci-lint)
+        make dep              # Install/tidy project dependencies
+        make build            # Build all packages
+        make test             # Run unit tests (race detection, -short, skips Docker tests)
+        make test-integration # Run integration tests
+        make lint             # Run golangci-lint
+        make vet              # Run go vet
+        make fmt              # Format all Go files (gofmt)
+        make generate         # Generate code from specs/schemas
+        make clean            # Clean build artifacts
+        make check            # build + lint + vet + unit tests
+        make check-all        # build + lint + vet + all tests
+        ```
+
+    - heading: "Development Standards"
+      source: instructions/coding-standards.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Testing Standards"
+      source: instructions/testing-standards.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Important Architecture Documents"
+      render: static
+      headingLevel: 2
+      content: |
+        | Document | Purpose |
+        |----------|---------|
+        | `docs/architecture/overview.md` | System design, hexagonal layers, domain model, bounded contexts, package layout |
+        | `docs/architecture/compiler.md` | Pipeline stages, stage interfaces, compiler plugin contracts |
+        | `docs/architecture/build-output.md` | Output structure, hybrid emission layers, provenance, deterministic reports |
+        | `docs/architecture/target-grounding.md` | Target capability mapping (Claude, Cursor, Copilot, Codex) |
+        | `docs/architecture/schemas.md` | Schema definitions for canonical objects |
+        | `docs/architecture/marketplace.md` | Registry/marketplace design for plugin distribution |
+        | `docs/architecture/editor-tooling.md` | Editor integration and tooling support |
+
+    - heading: "Skills & Agents"
+      headingLevel: 2
+      subsections:
+        - heading: "Available Skills"
+          render: pluginTable
+          pluginKind: skill
+          columns: [id, description]
+        - heading: "Available Agents"
+          render: agentTable
+          source: agents/
+          columns: [id, description]
+
+    - heading: "Domain Concepts (Ubiquitous Language)"
+      source: instructions/project-context.md
+      render: extract
+      extractSection: "Ubiquitous Language"
+      headingLevel: 2
+
+# --- GitHub Copilot instructions file ---
+copilotInstructions:
+  path: .github/copilot-instructions.md
+  description: GitHub Copilot repo-level instructions (subset of AGENT.md)
+  sections:
+    - heading: "GoAgentMeta"
+      source: instructions/project-context.md
+      render: extract
+      extractSection: "Technology"
+
+    - heading: "Coding Standards"
+      source: instructions/coding-standards.md
+      render: body
+
+    - heading: "Testing Standards"
+      source: instructions/testing-standards.md
+      render: body
+
+    - heading: "Architecture"
+      source: instructions/architecture.md
+      render: extract
+      extractSection: "Dependency Rule"
+
+# --- References ---
+references:
+  strategy: link
+  description: >
+    References are listed as document links in the Architecture Documents table.
+
+# --- Hooks ---
+hooks:
+  strategy: omit
+  description: >
+    GitHub Copilot has no native hook support. Hooks are enforced via
+    git hooks or CI, not embedded in AGENT.md.
+
+# --- Commands ---
+commands:
+  strategy: omit
+  description: >
+    Copilot does not support custom slash commands from AGENT.md.
+    Commands are documented but not actionable.

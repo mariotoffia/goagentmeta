@@ -1,0 +1,9 @@
+id: golang-benchmark
+kind: plugin
+version: 1
+description: Golang benchmarking, profiling, and performance measurement
+preservation: preferred
+distribution:
+  mode: external
+  source: github.com/samber/cc-skills-golang
+  version: v1.1.3

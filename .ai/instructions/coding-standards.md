@@ -5,8 +5,6 @@ version: 1
 description: Go coding conventions, style rules, and quality standards
 preservation: required
 scope:
-  paths:
-    - "**/*.go"
   fileTypes:
     - ".go"
 appliesTo:

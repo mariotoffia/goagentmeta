@@ -10,5 +10,4 @@ contract:
     to inspect source code, configuration files, and build output.
 
 security:
-  filesystem:
-    - read
+  filesystem: read-repo

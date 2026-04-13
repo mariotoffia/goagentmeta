@@ -1,0 +1,95 @@
+# Cursor target rendering configuration
+# Produces .cursorrules (root) and optionally .cursor/rules/*.md
+
+schemaVersion: 1
+target: cursor
+
+# --- Root rules file ---
+rootFile:
+  path: .cursorrules
+  description: Cursor project rules file
+  format: markdown
+  sections:
+    - heading: "GoAgentMeta - Project Rules"
+      source: instructions/project-context.md
+      render: body
+      headingLevel: 1
+
+    - heading: "Architecture"
+      source: instructions/architecture.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Coding Standards"
+      source: instructions/coding-standards.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Testing Standards"
+      source: instructions/testing-standards.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Architecture Rules"
+      headingLevel: 2
+      subsections:
+        - source: rules/domain-purity.md
+          render: body
+        - source: rules/adapter-isolation.md
+          render: body
+        - source: rules/port-contracts.md
+          render: body
+        - source: rules/pipeline-stage.md
+          render: body
+
+    - heading: "Build Commands"
+      render: static
+      headingLevel: 2
+      content: |
+        ```bash
+        make install          # Install system dependencies
+        make dep              # Install/tidy dependencies
+        make build            # Build all packages
+        make test             # Run unit tests
+        make lint             # Run golangci-lint
+        make vet              # Run go vet
+        make check            # build + lint + vet + unit tests
+        ```
+
+    - heading: "Skills"
+      render: pluginTable
+      pluginKind: skill
+      columns: [id, description]
+      headingLevel: 2
+
+    - heading: "Domain Concepts"
+      source: instructions/project-context.md
+      render: extract
+      extractSection: "Ubiquitous Language"
+      headingLevel: 2
+
+# --- Optional per-rule files ---
+cursorRules:
+  enabled: false
+  path: .cursor/rules/
+  description: >
+    When enabled, each .ai/rules/ file is emitted as a separate
+    .cursor/rules/<id>.md file with Cursor-native frontmatter.
+
+# --- References ---
+references:
+  strategy: omit
+  description: >
+    Cursor has no native reference loading. References are omitted.
+
+# --- Hooks ---
+hooks:
+  strategy: omit
+  description: >
+    Cursor has no native hook concept. Hooks run via git or CI.
+
+# --- Commands ---
+commands:
+  strategy: omit
+  description: >
+    Cursor does not support custom slash commands from .cursorrules.

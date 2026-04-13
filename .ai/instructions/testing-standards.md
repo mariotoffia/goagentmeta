@@ -5,9 +5,6 @@ version: 1
 description: Testing requirements, patterns, and verification workflow
 preservation: required
 scope:
-  paths:
-    - "**/*_test.go"
-    - "tests/**"
   fileTypes:
     - ".go"
 appliesTo:

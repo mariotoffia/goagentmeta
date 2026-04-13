@@ -1,0 +1,49 @@
+# JSON Schema (expressed as YAML) for kind: capability
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://goagentmeta.dev/schema/capability.yaml"
+title: Capability
+description: Abstract contract required by authoring primitives
+type: object
+
+required: [id, kind, version, description, contract]
+
+properties:
+  id:
+    type: string
+    description: Dotted capability identifier (e.g., filesystem.read, repo.search)
+
+  kind:
+    type: string
+    const: capability
+
+  version:
+    type: integer
+    minimum: 1
+
+  description:
+    type: string
+    minLength: 1
+
+  contract:
+    type: object
+    required: [category]
+    properties:
+      category:
+        type: string
+        enum: [filesystem, repo, tool, mcp, network]
+      description:
+        type: string
+
+  security:
+    type: object
+    properties:
+      filesystem:
+        type: array
+        items:
+          type: string
+          enum: [read, write]
+      network:
+        type: array
+        items:
+          type: string
+          enum: [outbound, inbound]

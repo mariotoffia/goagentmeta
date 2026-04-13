@@ -1,3 +1,19 @@
+---
+id: language-reference
+kind: reference
+version: 1
+description: Pointer to canonical object language syntax documentation
+preservation: optional
+rendering:
+  claude: link
+  copilot: link
+  cursor: omit
+  codex: omit
+appliesTo:
+  targets: ["*"]
+  profiles: ["*"]
+---
+
 # Language Reference
 
 For the full canonical object syntax, see:

@@ -1,0 +1,55 @@
+# JSON Schema (expressed as YAML) for kind: plugin
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://goagentmeta.dev/schema/plugin.yaml"
+title: Plugin
+description: Deployable extension package providing capabilities, tool manifests, MCP bindings
+type: object
+
+required: [id, kind, version, description, source]
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+
+  kind:
+    type: string
+    const: plugin
+
+  version:
+    type: integer
+    minimum: 1
+
+  description:
+    type: string
+    minLength: 1
+
+  source:
+    type: object
+    required: [type]
+    properties:
+      type:
+        type: string
+        enum: [agentskills, github, local, npm, oci]
+      repository:
+        type: string
+        description: Source repository URL or registry path
+      ref:
+        type: string
+        description: Version tag, branch, or commit
+      integrity:
+        type: string
+        description: SHA-256 integrity hash
+
+  provides:
+    type: array
+    items: { type: string }
+    description: Capability IDs this plugin provides
+
+  materializes:
+    type: object
+    description: Where to place plugin files in output
+    properties:
+      path:
+        type: string
+        description: Relative output path (e.g., .agents/skills/<name>)

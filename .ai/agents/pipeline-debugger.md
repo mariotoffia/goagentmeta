@@ -8,9 +8,10 @@ skills:
   - compiler-stage-dev
   - target-renderer-dev
 requires:
-  - filesystem.read
-  - terminal.exec
-  - repo.search
+  capabilities:
+    - filesystem.read
+    - terminal.exec
+    - repo.search
 tools:
   - Read
   - Grep

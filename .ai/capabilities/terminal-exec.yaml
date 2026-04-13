@@ -10,6 +10,4 @@ contract:
     make targets, go commands, and other build/test tooling.
 
 security:
-  filesystem:
-    - read
-    - write
+  filesystem: read-write

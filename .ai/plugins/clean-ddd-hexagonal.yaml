@@ -1,0 +1,9 @@
+id: clean-ddd-hexagonal
+kind: plugin
+version: 1
+description: Clean Architecture + DDD + Hexagonal patterns for backend services (language-agnostic)
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/clean-ddd-hexagonal
+  version: latest

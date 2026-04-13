@@ -1,0 +1,61 @@
+# JSON Schema (expressed as YAML) for kind: agent
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://goagentmeta.dev/schema/agent.yaml"
+title: Agent
+description: Specialized delegate — role/prompt + tool policy + permissions + linked skills
+type: object
+
+required: [id, kind, version, description]
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+
+  kind:
+    type: string
+    const: agent
+
+  version:
+    type: integer
+    minimum: 1
+
+  description:
+    type: string
+    minLength: 1
+
+  preservation:
+    type: string
+    enum: [required, preferred, optional]
+    default: preferred
+
+  skills:
+    type: array
+    items: { type: string }
+    description: Skill IDs this agent uses
+
+  requires:
+    type: array
+    items: { type: string }
+    description: Capability IDs this agent requires
+
+  tools:
+    type: array
+    items: { type: string }
+    description: Tool expressions this agent is allowed to use
+
+  disallowedTools:
+    type: array
+    items: { type: string }
+    description: Tool expressions this agent must not use
+
+  delegation:
+    type: object
+    properties:
+      mayCall:
+        type: array
+        items: { type: string }
+        description: Other agent IDs this agent may delegate to
+
+  appliesTo:
+    $ref: "instruction.yaml#/$defs/AppliesTo"

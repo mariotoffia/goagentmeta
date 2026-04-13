@@ -5,9 +5,10 @@ version: 1
 description: How to create and register new tool plugins for expression validation
 preservation: preferred
 requires:
-  - filesystem.read
-  - filesystem.write
-  - terminal.exec
+  capabilities:
+    - filesystem.read
+    - filesystem.write
+    - terminal.exec
 activation:
   hints:
     - tool plugin

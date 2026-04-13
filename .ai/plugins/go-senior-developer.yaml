@@ -1,0 +1,9 @@
+id: go-senior-developer
+kind: plugin
+version: 1
+description: Expert senior-level Go guidance for architecture, concurrency, performance, and tooling
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/go-senior-developer
+  version: latest

@@ -1,0 +1,31 @@
+# Copilot target capability mapping
+
+schemaVersion: 1
+target: copilot
+
+capabilities:
+  filesystem.read:
+    nativeTools: [file_search, code_search]
+    supported: true
+
+  filesystem.write:
+    nativeTools: [apply_diff, write_to_file]
+    supported: true
+
+  repo.search:
+    nativeTools: [code_search, file_search]
+    supported: true
+
+  terminal.exec:
+    nativeTools: [run_terminal_cmd]
+    supported: true
+
+toolExpressionMapping:
+  Read: file_search
+  Write: write_to_file
+  Edit: apply_diff
+  Grep: code_search
+  Glob: file_search
+  Bash: run_terminal_cmd
+
+mcpSupport: false

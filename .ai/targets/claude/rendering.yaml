@@ -1,0 +1,145 @@
+# Claude target rendering configuration
+# Tells the compiler how to produce Claude Code native artifacts from .ai/ sources
+
+schemaVersion: 1
+target: claude
+
+# --- Root instruction file ---
+rootFile:
+  path: CLAUDE.md
+  description: Claude Code project instructions file
+  sections:
+    - heading: "GoAgentMeta - Agent Guidelines"
+      source: instructions/project-context.md
+      render: body
+      headingLevel: 1
+
+    - heading: "Architecture & Design Principles"
+      source: instructions/architecture.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Technology Stack"
+      source: instructions/project-context.md
+      render: extract
+      extractSection: "Technology"
+      headingLevel: 2
+
+    - heading: "Project Structure"
+      source: instructions/architecture.md
+      render: extract
+      extractSection: "Layer Responsibilities"
+      headingLevel: 2
+
+    - heading: "Build Commands"
+      render: static
+      headingLevel: 2
+      content: |
+        ```bash
+        make install          # Install system dependencies (Go, golangci-lint)
+        make dep              # Install/tidy project dependencies
+        make build            # Build all packages
+        make test             # Run unit tests (race detection, -short, skips Docker tests)
+        make test-integration # Run integration tests
+        make lint             # Run golangci-lint
+        make vet              # Run go vet
+        make fmt              # Format all Go files (gofmt)
+        make generate         # Generate code from specs/schemas
+        make clean            # Clean build artifacts
+        make check            # build + lint + vet + unit tests
+        make check-all        # build + lint + vet + all tests
+        ```
+
+    - heading: "Development Standards"
+      source: instructions/coding-standards.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Testing Standards"
+      source: instructions/testing-standards.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Architecture Rules"
+      headingLevel: 2
+      subsections:
+        - source: rules/domain-purity.md
+          render: body
+        - source: rules/adapter-isolation.md
+          render: body
+        - source: rules/port-contracts.md
+          render: body
+        - source: rules/pipeline-stage.md
+          render: body
+
+    - heading: "Important Architecture Documents"
+      render: static
+      headingLevel: 2
+      content: |
+        | Document | Purpose |
+        |----------|---------|
+        | `docs/architecture/overview.md` | System design, hexagonal layers, domain model, bounded contexts, package layout |
+        | `docs/architecture/compiler.md` | Pipeline stages, stage interfaces, compiler plugin contracts |
+        | `docs/architecture/build-output.md` | Output structure, hybrid emission layers, provenance, deterministic reports |
+        | `docs/architecture/target-grounding.md` | Target capability mapping (Claude, Cursor, Copilot, Codex) |
+        | `docs/architecture/schemas.md` | Schema definitions for canonical objects |
+        | `docs/architecture/marketplace.md` | Registry/marketplace design for plugin distribution |
+        | `docs/architecture/editor-tooling.md` | Editor integration and tooling support |
+
+    - heading: "Skills & Agents"
+      headingLevel: 2
+      subsections:
+        - heading: "Available Skills (External)"
+          render: pluginTable
+          pluginKind: skill
+          columns: [id, description]
+        - heading: "Project Skills"
+          render: skillTable
+          source: skills/
+          columns: [id, description, activation.hints]
+        - heading: "Project Agents"
+          render: agentTable
+          source: agents/
+          columns: [id, description, tools]
+
+    - heading: "Domain Concepts (Ubiquitous Language)"
+      source: instructions/project-context.md
+      render: extract
+      extractSection: "Ubiquitous Language"
+      headingLevel: 2
+
+    - heading: "Commands"
+      render: commandTable
+      source: commands/
+      columns: [id, description, action.type]
+      headingLevel: 2
+
+# --- Skill symlinks ---
+skills:
+  strategy: symlink
+  source: .agents/skills/
+  target: .claude/skills/
+  description: >
+    For each plugin with emission.claude.symlink defined,
+    create a symlink from .claude/skills/<id> to .agents/skills/<id>
+
+# --- References ---
+references:
+  strategy: omit
+  description: >
+    Claude Code has no native reference concept.
+    References are either inlined via rootFile sections or omitted.
+
+# --- Hooks ---
+hooks:
+  strategy: inline
+  description: >
+    Claude Code has no native hook concept.
+    Hook information is inlined as guidance text in CLAUDE.md.
+
+# --- Commands ---
+commands:
+  strategy: inline
+  description: >
+    Claude Code supports slash commands via CLAUDE.md documentation.
+    Commands are listed as a table in the root file.

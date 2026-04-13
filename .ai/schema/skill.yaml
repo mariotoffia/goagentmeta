@@ -1,0 +1,56 @@
+# JSON Schema (expressed as YAML) for kind: skill
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://goagentmeta.dev/schema/skill.yaml"
+title: Skill
+description: Reusable, model-facing workflow bundle
+type: object
+
+required: [id, kind, version, description]
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+
+  kind:
+    type: string
+    const: skill
+
+  version:
+    type: integer
+    minimum: 1
+
+  description:
+    type: string
+    minLength: 1
+
+  preservation:
+    type: string
+    enum: [required, preferred, optional]
+    default: preferred
+
+  requires:
+    type: array
+    items: { type: string }
+    description: Capability IDs this skill requires
+
+  activation:
+    type: object
+    properties:
+      hints:
+        type: array
+        items: { type: string }
+        description: Keywords or phrases that trigger this skill
+
+  references:
+    type: array
+    items: { type: string }
+    description: Reference document IDs for supplemental knowledge
+
+  tools:
+    type: array
+    items: { type: string }
+    description: Tool expressions this skill may use
+
+  appliesTo:
+    $ref: "instruction.yaml#/$defs/AppliesTo"

@@ -1,0 +1,28 @@
+schemaVersion: 1
+id: ci
+kind: profile
+description: CI profile — minimal output, strict enforcement, no interactive skills
+
+settings:
+  diagnostics:
+    verbosity: minimal
+    includeProvenance: true
+
+  capabilities:
+    allowAll: false
+    allowed:
+      - filesystem.read
+      - terminal.exec
+
+  skills:
+    includeExternal: false
+    includeProject: false
+
+  hooks:
+    enabled: true
+    enforcement: blocking
+
+  rendering:
+    includeReferences: omit
+    includeCommands: false
+    includeDomainConcepts: false

@@ -1,0 +1,79 @@
+# Codex target rendering configuration
+# Produces AGENTS.md (root)
+
+schemaVersion: 1
+target: codex
+
+# --- Root instruction file ---
+rootFile:
+  path: AGENTS.md
+  description: OpenAI Codex agent instructions file
+  sections:
+    - heading: "GoAgentMeta"
+      source: instructions/project-context.md
+      render: body
+      headingLevel: 1
+
+    - heading: "Architecture"
+      source: instructions/architecture.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Coding Standards"
+      source: instructions/coding-standards.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Testing Standards"
+      source: instructions/testing-standards.md
+      render: body
+      headingLevel: 2
+
+    - heading: "Build Commands"
+      render: static
+      headingLevel: 2
+      content: |
+        ```bash
+        make build            # Build all packages
+        make test             # Run unit tests
+        make lint             # Run golangci-lint
+        make vet              # Run go vet
+        make check            # build + lint + vet + unit tests
+        ```
+
+    - heading: "Architecture Rules"
+      headingLevel: 2
+      subsections:
+        - source: rules/domain-purity.md
+          render: body
+        - source: rules/adapter-isolation.md
+          render: body
+        - source: rules/port-contracts.md
+          render: body
+        - source: rules/pipeline-stage.md
+          render: body
+
+    - heading: "Domain Concepts"
+      source: instructions/project-context.md
+      render: extract
+      extractSection: "Ubiquitous Language"
+      headingLevel: 2
+
+# --- Agents ---
+agents:
+  strategy: inline
+  description: >
+    Codex supports inline agent definitions within AGENTS.md.
+    Each .ai/agents/ file is rendered as a section.
+
+# --- References ---
+references:
+  strategy: omit
+
+# --- Hooks ---
+hooks:
+  strategy: omit
+
+# --- Commands ---
+commands:
+  strategy: omit

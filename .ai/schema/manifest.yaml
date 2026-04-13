@@ -1,0 +1,79 @@
+# JSON Schema (expressed as YAML) for manifest.yaml
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://goagentmeta.dev/schema/manifest.yaml"
+title: Manifest
+description: Root project manifest configuring the GoAgentMeta compiler
+type: object
+
+required: [schemaVersion, project, build]
+
+properties:
+  schemaVersion:
+    type: integer
+    const: 1
+
+  project:
+    type: object
+    required: [name]
+    properties:
+      name:
+        type: string
+      monorepo:
+        type: boolean
+        default: false
+
+  build:
+    type: object
+    properties:
+      defaultTargets:
+        type: array
+        items:
+          type: string
+          enum: [claude, cursor, copilot, codex]
+      defaultProfiles:
+        type: array
+        items: { type: string }
+      outputRoot:
+        type: string
+        default: .ai-build
+      syncMode:
+        type: string
+        enum: [explicit, auto]
+        default: explicit
+
+  compilation:
+    type: object
+    properties:
+      hierarchyMode:
+        type: string
+        enum: [preserve-when-supported, flatten, target-native]
+      materialization:
+        type: string
+        enum: [copy-or-symlink, copy-only, symlink-only]
+      unsupportedMode:
+        type: string
+        enum: [fail-on-required, warn-all, skip-all]
+      provenance:
+        type: string
+        enum: [full, summary, none]
+
+  preservation:
+    type: object
+    properties:
+      default:
+        type: string
+        enum: [required, preferred, optional]
+
+  targets:
+    type: object
+    additionalProperties:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+
+  profiles:
+    type: object
+    additionalProperties:
+      type: string
+      description: Relative path to profile YAML file

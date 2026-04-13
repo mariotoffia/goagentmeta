@@ -5,8 +5,9 @@ version: 1
 description: How to author .ai/ canonical source files for all entity types
 preservation: preferred
 requires:
-  - filesystem.read
-  - filesystem.write
+  capabilities:
+    - filesystem.read
+    - filesystem.write
 resources:
   references:
     - references/language-reference.md

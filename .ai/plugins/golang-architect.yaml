@@ -1,0 +1,9 @@
+id: golang-architect
+kind: plugin
+version: 1
+description: Software Architect specializing in Go projects — architecture selection, module design
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/golang-architect
+  version: latest

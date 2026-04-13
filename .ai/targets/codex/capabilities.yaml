@@ -1,0 +1,31 @@
+# Codex target capability mapping
+
+schemaVersion: 1
+target: codex
+
+capabilities:
+  filesystem.read:
+    nativeTools: [read_file, list_directory]
+    supported: true
+
+  filesystem.write:
+    nativeTools: [write_file, apply_patch]
+    supported: true
+
+  repo.search:
+    nativeTools: [search_files, search_code]
+    supported: true
+
+  terminal.exec:
+    nativeTools: [shell]
+    supported: true
+
+toolExpressionMapping:
+  Read: read_file
+  Write: write_file
+  Edit: apply_patch
+  Grep: search_code
+  Glob: search_files
+  Bash: shell
+
+mcpSupport: false

@@ -1,0 +1,9 @@
+id: go-test-expert
+kind: plugin
+version: 1
+description: Expert in Go testing patterns, table-driven tests, httptest, benchmarking, and fuzzing
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/go-test-expert
+  version: latest

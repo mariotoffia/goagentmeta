@@ -1,0 +1,9 @@
+id: vscode-extension-expert
+kind: plugin
+version: 1
+description: Expert-level guidance for VS Code extension development
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/vscode-extension-expert
+  version: latest

@@ -1,0 +1,40 @@
+# JSON Schema (expressed as YAML) for kind: rule
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://goagentmeta.dev/schema/rule.yaml"
+title: Rule
+description: Scoped or conditional policy (language-specific rules, security restrictions)
+type: object
+
+required: [id, kind, version, description]
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+
+  kind:
+    type: string
+    const: rule
+
+  version:
+    type: integer
+    minimum: 1
+
+  description:
+    type: string
+    minLength: 1
+
+  preservation:
+    type: string
+    enum: [required, preferred, optional]
+    default: preferred
+
+  condition:
+    type: string
+    description: Glob pattern or condition expression for when this rule applies
+
+  scope:
+    $ref: "instruction.yaml#/$defs/Scope"
+
+  appliesTo:
+    $ref: "instruction.yaml#/$defs/AppliesTo"

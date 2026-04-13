@@ -1,0 +1,25 @@
+schemaVersion: 1
+id: local-dev
+kind: profile
+description: Local development profile — full skills, verbose diagnostics, all capabilities enabled
+
+settings:
+  diagnostics:
+    verbosity: verbose
+    includeProvenance: true
+
+  capabilities:
+    allowAll: true
+
+  skills:
+    includeExternal: true
+    includeProject: true
+
+  hooks:
+    enabled: true
+    enforcement: warning
+
+  rendering:
+    includeReferences: inline
+    includeCommands: true
+    includeDomainConcepts: true

@@ -5,9 +5,10 @@ version: 1
 description: Step-by-step guide to creating a new compiler pipeline stage plugin
 preservation: preferred
 requires:
-  - filesystem.read
-  - filesystem.write
-  - terminal.exec
+  capabilities:
+    - filesystem.read
+    - filesystem.write
+    - terminal.exec
 resources:
   references:
     - references/compiler-pipeline.md

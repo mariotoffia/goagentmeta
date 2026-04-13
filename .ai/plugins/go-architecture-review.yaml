@@ -1,0 +1,9 @@
+id: go-architecture-review
+kind: plugin
+version: 1
+description: Review Go project architecture — package structure, dependency direction, layering
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/go-architecture-review
+  version: latest

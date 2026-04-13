@@ -1,0 +1,9 @@
+id: lsp-setup
+kind: plugin
+version: 1
+description: Auto-discovers and configures Language Server Protocol (LSP) servers for project languages
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/lsp-setup
+  version: latest

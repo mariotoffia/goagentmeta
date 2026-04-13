@@ -1,0 +1,9 @@
+id: golang-enterprise-patterns
+kind: plugin
+version: 1
+description: Enterprise-level Go architecture patterns including clean architecture, hexagonal, DDD
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/golang-enterprise-patterns
+  version: v1.0.1

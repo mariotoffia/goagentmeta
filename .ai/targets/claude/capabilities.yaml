@@ -1,0 +1,41 @@
+# Claude target capability mapping
+# Maps abstract capabilities to Claude Code native tools
+
+schemaVersion: 1
+target: claude
+
+capabilities:
+  filesystem.read:
+    nativeTools: [Read, View]
+    supported: true
+
+  filesystem.write:
+    nativeTools: [Write, Edit]
+    supported: true
+
+  repo.search:
+    nativeTools: [Grep, Glob]
+    supported: true
+
+  terminal.exec:
+    nativeTools: [Bash]
+    supported: true
+    parameterized: true
+    description: >
+      Claude Code supports parameterized Bash tool expressions.
+      Example: Bash(go:*), Bash(make:*)
+
+toolExpressionMapping:
+  Read: Read
+  Write: Write
+  Edit: Edit
+  Grep: Grep
+  Glob: Glob
+  Bash: Bash
+  WebSearch: WebSearch
+  WebFetch: WebFetch
+  Agent: Agent
+
+mcpSupport: true
+mcpPrefix: "mcp__"
+mcpSeparator: "__"

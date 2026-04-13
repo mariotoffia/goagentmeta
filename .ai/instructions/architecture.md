@@ -4,11 +4,6 @@ kind: instruction
 version: 1
 description: Core architecture principles — hexagonal, clean, DDD, compiler-as-control-plane
 preservation: required
-scope:
-  paths:
-    - "internal/**"
-    - "pkg/**"
-    - "cmd/**"
 appliesTo:
   targets: ["*"]
   profiles: ["*"]

@@ -8,8 +8,9 @@ skills:
   - compiler-stage-dev
   - domain-modeling
 requires:
-  - filesystem.read
-  - repo.search
+  capabilities:
+    - filesystem.read
+    - repo.search
 tools:
   - Read
   - Grep

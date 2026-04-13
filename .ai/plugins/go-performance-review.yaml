@@ -1,0 +1,9 @@
+id: go-performance-review
+kind: plugin
+version: 1
+description: Detect performance anti-patterns and apply optimization techniques in Go
+preservation: preferred
+distribution:
+  mode: external
+  source: agentskills.io/go-performance-review
+  version: latest

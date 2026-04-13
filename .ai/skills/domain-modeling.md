@@ -5,9 +5,10 @@ version: 1
 description: How to model domain types following GoAgentMeta patterns
 preservation: preferred
 requires:
-  - filesystem.read
-  - filesystem.write
-  - terminal.exec
+  capabilities:
+    - filesystem.read
+    - filesystem.write
+    - terminal.exec
 activation:
   hints:
     - domain type

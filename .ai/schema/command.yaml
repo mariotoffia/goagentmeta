@@ -1,0 +1,39 @@
+# JSON Schema (expressed as YAML) for kind: command
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://goagentmeta.dev/schema/command.yaml"
+title: Command
+description: Explicit user-invoked entry point
+type: object
+
+required: [id, kind, version, description, action]
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+
+  kind:
+    type: string
+    const: command
+
+  version:
+    type: integer
+    minimum: 1
+
+  description:
+    type: string
+    minLength: 1
+
+  action:
+    type: object
+    required: [type, ref]
+    properties:
+      type:
+        type: string
+        enum: [script, skill]
+      ref:
+        type: string
+        description: Path to script (relative to .ai/) or skill ID
+
+  appliesTo:
+    $ref: "instruction.yaml#/$defs/AppliesTo"

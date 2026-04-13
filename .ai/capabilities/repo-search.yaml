@@ -10,5 +10,4 @@ contract:
     that need to find code, trace dependencies, or locate definitions.
 
 security:
-  filesystem:
-    - read
+  filesystem: read-repo

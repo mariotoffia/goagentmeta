@@ -5,9 +5,10 @@ version: 1
 description: How to create a new target renderer for a platform ecosystem
 preservation: preferred
 requires:
-  - filesystem.read
-  - filesystem.write
-  - terminal.exec
+  capabilities:
+    - filesystem.read
+    - filesystem.write
+    - terminal.exec
 resources:
   references:
     - references/target-grounding.md

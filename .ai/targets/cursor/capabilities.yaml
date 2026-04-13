@@ -1,0 +1,32 @@
+# Cursor target capability mapping
+
+schemaVersion: 1
+target: cursor
+
+capabilities:
+  filesystem.read:
+    nativeTools: [codebase_search, read_file, list_dir]
+    supported: true
+
+  filesystem.write:
+    nativeTools: [edit_file, create_file]
+    supported: true
+
+  repo.search:
+    nativeTools: [codebase_search, grep_search, file_search]
+    supported: true
+
+  terminal.exec:
+    nativeTools: [run_terminal_command]
+    supported: true
+
+toolExpressionMapping:
+  Read: read_file
+  Write: create_file
+  Edit: edit_file
+  Grep: grep_search
+  Glob: file_search
+  Bash: run_terminal_command
+
+mcpSupport: true
+mcpPrefix: "mcp_"

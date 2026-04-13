@@ -26,13 +26,45 @@ preservation:
 targets:
   claude:
     enabled: true
+    rendering: targets/claude/rendering.yaml
+    capabilities: targets/claude/capabilities.yaml
   cursor:
     enabled: true
+    rendering: targets/cursor/rendering.yaml
+    capabilities: targets/cursor/capabilities.yaml
   copilot:
     enabled: true
+    rendering: targets/copilot/rendering.yaml
+    capabilities: targets/copilot/capabilities.yaml
   codex:
     enabled: true
+    rendering: targets/codex/rendering.yaml
+    capabilities: targets/codex/capabilities.yaml
 
 profiles:
   local-dev: profiles/local-dev.yaml
   ci: profiles/ci.yaml
+
+plugins:
+  - plugins/clean-ddd-hexagonal.yaml
+  - plugins/go-architecture-review.yaml
+  - plugins/go-benchmark-testing.yaml
+  - plugins/go-performance-review.yaml
+  - plugins/go-senior-developer.yaml
+  - plugins/go-test-expert.yaml
+  - plugins/golang-architect.yaml
+  - plugins/golang-benchmark.yaml
+  - plugins/golang-enterprise-patterns.yaml
+  - plugins/lsp-setup.yaml
+  - plugins/vscode-extension-expert.yaml
+
+schemas:
+  instruction: schema/instruction.yaml
+  rule: schema/rule.yaml
+  skill: schema/skill.yaml
+  agent: schema/agent.yaml
+  hook: schema/hook.yaml
+  command: schema/command.yaml
+  capability: schema/capability.yaml
+  plugin: schema/plugin.yaml
+  manifest: schema/manifest.yaml

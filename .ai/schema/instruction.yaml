@@ -1,0 +1,66 @@
+# JSON Schema (expressed as YAML) for kind: instruction
+$schema: "https://json-schema.org/draft/2020-12/schema"
+$id: "https://goagentmeta.dev/schema/instruction.yaml"
+title: Instruction
+description: Always-on guidance and context (architecture principles, coding standards, review policies)
+type: object
+
+required: [id, kind, version, description]
+
+properties:
+  id:
+    type: string
+    pattern: "^[a-z][a-z0-9-]*$"
+    description: Unique identifier within this kind
+
+  kind:
+    type: string
+    const: instruction
+
+  version:
+    type: integer
+    minimum: 1
+
+  description:
+    type: string
+    minLength: 1
+
+  preservation:
+    type: string
+    enum: [required, preferred, optional]
+    default: preferred
+
+  scope:
+    $ref: "#/$defs/Scope"
+
+  appliesTo:
+    $ref: "#/$defs/AppliesTo"
+
+$defs:
+  Scope:
+    type: object
+    properties:
+      paths:
+        type: array
+        items: { type: string }
+        description: >
+          For instructions: directory paths only (e.g., "internal/adapter").
+          Glob patterns like "**/*.go" must NOT be used — they are for rules.
+          Instructions without scope.paths are root-scoped (merged into CLAUDE.md / AGENTS.md).
+      fileTypes:
+        type: array
+        items: { type: string }
+        description: File type relevance hints (e.g., ".go"). Informational only.
+      labels:
+        type: array
+        items: { type: string }
+
+  AppliesTo:
+    type: object
+    properties:
+      targets:
+        type: array
+        items: { type: string }
+      profiles:
+        type: array
+        items: { type: string }

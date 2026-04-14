@@ -8,6 +8,8 @@ Each target gets its own idiomatic layout — `CLAUDE.md` + `.claude/skills/` fo
 Claude, `AGENTS.md` + `.github/copilot-instructions.md` for Copilot, etc. — all
 generated from the same canonical source files.
 
+**It even supports to do hierarchical *AGENT.md* or *CLAUDE.md* based on glob expressions**
+
 ## Why
 
 Every AI coding assistant uses a different configuration format. Maintaining

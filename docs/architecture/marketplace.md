@@ -390,17 +390,49 @@ Users install once and receive updates through the platform's own mechanism.
 
 ### 10.2 Packaging as a Compiler Post-Step
 
-Platform-native packaging is a post-compilation step. The compiler emits target artifacts first; a separate packaging stage wraps them.
+Platform-native packaging is a post-compilation step. The `goagentmeta package` command compiles the `.ai/` source tree and then invokes the appropriate packager.
 
 ```text
 .ai/ source tree
-  -> compiler pipeline
+  -> goagentmeta package --format plugin
   -> .ai-build/ target artifacts
-  -> platform packager (optional)
-  -> distributable packages (VS Code .vsix, npm tarball, OCI image, etc.)
+  -> .ai-build/dist/ distributable package (Claude plugin, .vsix, .tgz, etc.)
 ```
 
-The manifest controls packaging:
+#### Claude Code Plugin Packaging
+
+```bash
+goagentmeta package --format plugin --name my-plugin --version 1.0.0 \
+  --author "DevTools Team" --license MIT --keyword go --keyword testing
+```
+
+This produces a distributable Claude Code plugin directory:
+
+```
+.ai-build/dist/my-plugin/
+├── .claude-plugin/plugin.json
+├── skills/<id>/SKILL.md
+├── agents/<id>.md
+├── hooks/hooks.json
+├── .mcp.json
+└── bin/
+```
+
+#### Claude Code Marketplace Catalog
+
+```bash
+goagentmeta package --format marketplace --name my-plugin \
+  --marketplace-name company-tools --marketplace-owner "DevTools Team" \
+  --source ./plugins/my-plugin --category development-workflows
+```
+
+This generates a `.claude-plugin/marketplace.json` compatible with Claude Code's
+`/plugin marketplace add` command.
+
+See [packaging/architecture.md](../packaging/architecture.md) for the full CLI
+reference and end-to-end workflow.
+
+The manifest may also declare packaging configuration:
 
 ```yaml
 build:

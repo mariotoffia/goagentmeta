@@ -3,12 +3,38 @@
 This document describes the packaging subsystem that transforms compiled
 emission plans into distributable artifacts for various target platforms.
 
+## Quick Start
+
+Package your `.ai/` source tree into a distributable Claude Code plugin:
+
+```bash
+# Build & package as a Claude Code plugin
+goagentmeta package --format plugin --name my-plugin --version 1.0.0 \
+  --author "Your Name" --license MIT --description "My skills & agents"
+
+# Generate a marketplace catalog referencing plugins
+goagentmeta package --format marketplace --name my-plugin \
+  --marketplace-name my-tools --marketplace-owner "Your Team" \
+  --source ./plugins/my-plugin --category development-workflows
+
+# Dry-run to see what would be produced without writing files
+goagentmeta package --format plugin --name my-plugin --dry-run
+```
+
+See the [CLI Reference](#cli-reference) section below for all flags and options.
+
 ## Overview
 
 The packaging system follows the hexagonal architecture pattern:
 
 ```
 ┌─────────────────────────────────────────────────────┐
+│                    CLI Layer                          │
+│                                                       │
+│   adapter/cli/package_cmd.go                         │
+│   └─ goagentmeta package  (build + package in one)   │
+│                                                       │
+├───────────────────────────────────────────────────────┤
 │                  Application Layer                    │
 │                                                       │
 │   PackagingService                                   │
@@ -191,6 +217,180 @@ packaging:
         category: "development"
         tags: ["go", "testing"]
 ```
+
+## CLI Reference
+
+The `goagentmeta package` command compiles `.ai/` source files and packages the
+output into distributable formats. It runs the full compiler pipeline first, then
+invokes the appropriate packager or marketplace generator.
+
+### Synopsis
+
+```bash
+goagentmeta package [paths...] [flags]
+```
+
+### Packaging Formats
+
+| Format | Flag | Description |
+|--------|------|-------------|
+| `plugin` | `--format plugin` (default) | Produces a distributable Claude Code plugin directory |
+| `marketplace` | `--format marketplace` | Generates a `marketplace.json` catalog |
+
+### Common Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--name` | *(required)* | Plugin name (kebab-case) |
+| `--version` | `0.0.1` | Plugin version (semver) |
+| `--author` | | Plugin author name |
+| `--description` | | Plugin description |
+| `--license` | | SPDX license identifier (e.g., `MIT`, `Apache-2.0`) |
+| `--keyword` | | Discovery keywords (repeatable) |
+| `--category` | | Plugin category (e.g., `code-intelligence`, `development-workflows`) |
+| `--tag` | | Searchability tags (repeatable) |
+| `--output-dir` | `.ai-build/dist` | Output directory for packaged artifacts |
+| `-t, --target` | `claude` | Build targets (`claude`, `cursor`, `copilot`, `codex`, `all`) |
+| `-p, --profile` | `local-dev` | Build profile |
+| `--dry-run` | `false` | Print what would be produced without writing files |
+
+### Marketplace-Specific Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--marketplace-name` | *(required)* | Marketplace catalog name |
+| `--marketplace-owner` | *(required)* | Marketplace owner name |
+| `--source` | `./<name>` | Plugin source (relative path, `github:owner/repo`, `npm:@scope/name`, or URL) |
+
+### Source Formats
+
+The `--source` flag supports multiple formats that map to Claude Code's source types:
+
+| Prefix | Source Type | Example |
+|--------|------------|---------|
+| *(none)* | Relative path | `./plugins/my-plugin` |
+| `github:` | GitHub repository | `github:acme/my-plugin` |
+| `npm:` | npm package | `npm:@acme/my-plugin` |
+| `https://` or `git@` | Git URL | `https://github.com/acme/my-plugin.git` |
+
+### Examples
+
+```bash
+# Build & package as a Claude Code plugin with full metadata
+goagentmeta package --format plugin --name my-plugin \
+  --version 1.0.0 --author "DevTools Team" --license MIT \
+  --description "Reusable Go development skills" \
+  --keyword go --keyword testing --keyword aws \
+  --category code-intelligence
+
+# Build for Claude only with custom output directory
+goagentmeta package -t claude --format plugin --name my-plugin \
+  --version 1.0.0 --output-dir dist/plugins
+
+# Generate a marketplace catalog with a relative source
+goagentmeta package --format marketplace --name my-plugin \
+  --marketplace-name company-tools --marketplace-owner "DevTools Team" \
+  --source ./plugins/my-plugin --category development-workflows \
+  --tag go --tag ai
+
+# Generate a marketplace catalog with a GitHub source
+goagentmeta package --format marketplace --name my-plugin \
+  --marketplace-name company-tools --marketplace-owner "DevTools Team" \
+  --source github:acme/my-plugin
+
+# Dry-run to preview output
+goagentmeta package --format plugin --name my-plugin --dry-run
+```
+
+## End-to-End Workflow
+
+### 1. Package as a Claude Code Plugin
+
+```bash
+goagentmeta package --format plugin --name goagentmeta-skills \
+  --version 1.0.0 --author "Mario Toffia" --license MIT
+```
+
+This produces:
+
+```
+.ai-build/dist/goagentmeta-skills/
+├── .claude-plugin/
+│   └── plugin.json          ← generated manifest
+├── skills/
+│   └── <id>/SKILL.md        ← from .claude/skills/
+├── agents/
+│   └── <id>.md              ← from .claude/agents/
+├── hooks/
+│   └── hooks.json           ← extracted from settings.json
+├── .mcp.json                ← MCP server config (if any)
+└── bin/                     ← emitted scripts (if any)
+```
+
+### 2. Test the Plugin Locally
+
+```bash
+claude --plugin-dir .ai-build/dist/goagentmeta-skills
+```
+
+### 3. Generate a Marketplace Catalog
+
+```bash
+goagentmeta package --format marketplace --name goagentmeta-skills \
+  --marketplace-name my-marketplace --marketplace-owner "DevTools Team" \
+  --source ./plugins/goagentmeta-skills --category development-workflows
+```
+
+This produces `.ai-build/dist/.claude-plugin/marketplace.json`:
+
+```json
+{
+  "name": "my-marketplace",
+  "owner": { "name": "DevTools Team" },
+  "plugins": [
+    {
+      "name": "goagentmeta-skills",
+      "source": "./plugins/goagentmeta-skills",
+      "category": "development-workflows",
+      "version": "1.0.0"
+    }
+  ]
+}
+```
+
+### 4. Distribute via Git Repository
+
+Push the marketplace output to a Git repository, then users install with:
+
+```
+/plugin marketplace add owner/repo
+/plugin install goagentmeta-skills@my-marketplace
+```
+
+### 5. Submit to Official Claude Marketplace
+
+For public distribution, submit the plugin at
+[claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit).
+Users can then discover and install it through Claude Code's built-in plugin UI
+(`/plugin` → Discover tab).
+
+## Pipeline Integration
+
+The `package` command integrates compilation and packaging in a single invocation:
+
+```
+.ai/ source tree
+  → compiler pipeline (parse → validate → resolve → normalize → plan →
+    capability → lower → render → materialize → report)
+  → packager (Claude plugin directory) or generator (marketplace.json)
+  → distributable artifacts under .ai-build/dist/
+```
+
+The command:
+1. Constructs and runs the full compiler pipeline (`wirePipeline`)
+2. Collects materialized files from the `BuildReport`
+3. Invokes the appropriate packager adapter or marketplace generator
+4. Writes distributable artifacts to `--output-dir`
 
 ## Extensibility Summary
 

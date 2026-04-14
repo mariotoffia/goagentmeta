@@ -16,9 +16,9 @@ var (
 
 // Global flags.
 var (
-	verbose  bool
-	noColor  bool
-	cfgFile  string
+	verbose bool
+	noColor bool
+	cfgFile string
 )
 
 var rootCmd = &cobra.Command{
@@ -42,6 +42,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(targetsCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(packageCmd)
 }
 
 func initConfig() {
